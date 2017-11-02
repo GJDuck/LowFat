@@ -397,6 +397,6 @@ Pointers](https://www.comp.nus.edu.sg/~gregory/papers/cc16lowfatptrs.pdf),
 International Conference on Compiler Construction, 2016
 
 [2] Gregory J. Duck, Roland H. C. Yap, Lorenzo Cavallaro, [Stack Bounds
-Protection with Low Fat Pointers](https://www.comp.nus.edu.sg/~gregory/papers/cc16lowfatptrs.pdf),
+Protection with Low Fat Pointers](https://www.comp.nus.edu.sg/~gregory/papers/ndss17stack.pdf),
 The Network and Distributed System Security Symposium, 2017
 
