@@ -28,7 +28,7 @@ allocation of objects of a given fixed size range, as illustrated by the
 diagram below.
 
 <p align="center">
-<img src="https://www.comp.nus.edu.sg/~gregory/lowfat/layout.png" width="40%"
+<img src="https://www.comp.nus.edu.sg/~gregory/lowfat/layout.png" width="60%"
 alt="LowFat memory layout" border="1">
 </p>
 
@@ -333,7 +333,7 @@ LowFat are:
   into padding).
 * Can also detect use-after-free errors.
 
-The main disadvantages of LowFat over AddressSanitizer are:
+The main disadvantages of AddressSanitizer over LowFat are:
 
 * High performance and very high memory overheads.
 * Overflows that "skip" redzones cannot be detected.
@@ -388,6 +388,16 @@ the National Research Foundation, Prime Minister's Office,
 Singapore under its National Cybersecurity R&D Program
 (TSUNAMi project, No. NRF2014NCR-NCR001-21) and administered
 by the National Cybersecurity R&D Directorate.
+
+Bugs
+----
+
+LowFat should be considered beta quality software.
+It has not yet been extensively tested on software other than the
+SPEC2006 benchmark suite.
+
+Please submit bug reports to
+[https://github.com/GJDuck/LowFat/issues](https://github.com/GJDuck/LowFat/issues).
 
 Bibliography
 ------------
