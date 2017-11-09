@@ -345,7 +345,7 @@ cases where the attacker can control the offset.
 
 A: Both SoftBound and MPX have the advantage that they are designed to detect
 sub-object bounds overflows, something which LowFat does not do directly
-(however, see EffectiveSan below).  However, both SoftBound and MPX have
+(however, see below).  However, both SoftBound and MPX have
 compatibility problems, namely by changing the ABI (SoftBound) and with
 multi-threaded code (shared state in contention).
 
@@ -356,16 +356,8 @@ multi-threaded code (shared state in contention).
 * **Use-after-free, or**
 * **Type confusion errors?**
 
-A: Yes with suitable extensions.  See the preprint version of our paper
-available archived here:
-
-* [EffectiveSan: Type and Memory Error Detection using Dynamically Typed C/C++](https://arxiv.org/abs/1710.06125)
-
-In this paper, we repurpose LowFat as a general meta data tracking scheme.
-EffectiveSan tracks the "effective type" of each allocated object, which can
-be used for comprehensive and accurate bounds and type error checking --
-effectively turning C/C++ into a dynamically typed language.  We plan to
-release EffectiveSan sometime in 2018.
+A: Yes with the suitable extensions.  We plan to release an extended system
+sometime in 2018.
 
 Versions
 --------
