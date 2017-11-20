@@ -1,8 +1,17 @@
 ==============================================================================
 LowFat Release License (for LowFat components only)
 ==============================================================================
+University of Illinois/NCSA
+Open Source License
+
 Copyright (c) 2017 The National University of Singapore
 All rights reserved.
+
+Developed by:
+
+    LowFat Team
+    The National University of Singapore
+    https://github.com/GJDuck/LowFat
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of
 this software and associated documentation files (the "Software"), to deal with
@@ -18,8 +27,8 @@ so, subject to the following conditions:
       this list of conditions and the following disclaimers in the
       documentation and/or other materials provided with the distribution.
 
-    * Neither the names of the LLVM Team, University of Illinois at
-      Urbana-Champaign, nor the names of its contributors may be used to
+    * Neither the names of the LowFat Team, the National University of
+      Singapore, nor the names of its contributors may be used to
       endorse or promote products derived from this Software without specific
       prior written permission.
 
