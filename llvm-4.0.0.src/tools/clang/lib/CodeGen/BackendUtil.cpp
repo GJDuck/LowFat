@@ -516,7 +516,8 @@ void EmitAssemblyHelper::CreateTargetMachine(bool MustCreateTM) {
       .Case("medium", llvm::CodeModel::Medium)
       .Case("large", llvm::CodeModel::Large)
       .Case("default", (LangOpts.Sanitize.has(SanitizerKind::LowFat)?
-                        llvm::CodeModel::Medium :
+                        (CodeGenOpts.RelocationModel == "pic"?
+                         llvm::CodeModel::Large : llvm::CodeModel::Medium) :
                         llvm::CodeModel::Default))
       .Default(~0u);
   assert(CodeModel != ~0u && "invalid code model!");
