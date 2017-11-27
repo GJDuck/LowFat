@@ -53,7 +53,7 @@ base of the object pointed to by `q` by working backwards:
 
 * Since `q` is within the range (`0x800000000..0xfffffffff`) we know that the
   allocation size of the object pointed to by `q` is 16bytes.
-* Since `q mod 16 = 0x8997f2820` we know that he base address of
+* Since `q - (q mod 16) = 0x8997f2820` we know that he base address of
   the object pointed to by `q` is `0x8997f2820`.
 
 Next, consider the following (trivial) function:
