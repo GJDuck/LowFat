@@ -10,6 +10,7 @@
 #
 
 LEGACY=no
+BUILD_PLUGIN=no
 
 build_llvm()
 {
@@ -70,6 +71,19 @@ build_llvm()
     cd ..
     echo
 
+    if [ $BUILD_PLUGIN = yes ]
+    then
+        echo -e "${GREEN}$0${OFF}: creating LowFat.so plugin..."
+        # These should not fail if we got this far:
+        $CLANGXX -DLOWFAT_PLUGIN "$PWD/$INSTRUMENTATION_PATH/LowFat.cpp" \
+            -c -Wall -O2 -I "$PWD/$INSTRUMENTATION_PATH/" -o LowFat.o \
+            `$LLVM_CONFIG --cxxflags` \
+            `$LLVM_CONFIG --includedir` >/dev/null 2>&1
+        $CLANGXX -shared -rdynamic -o LowFat.so LowFat.o \
+            `$LLVM_CONFIG --ldflags` >/dev/null 2>&1
+        rm -f LowFat.o LowFat.dwo
+    fi
+
     echo -e "${GREEN}$0${OFF}: cleaning up the LowFat config files..."
     rm -f "$PWD/${RUNTIME_PATH}/lowfat_config.h" \
           "$PWD/${RUNTIME_PATH}/lowfat_config.c" \
@@ -106,8 +120,9 @@ fi
 
 CLANG=`which clang-4.0`
 CLANGXX=`which clang++-4.0`
+LLVM_CONFIG=`which llvm-config-4.0`
 HAVE_CLANG_4=false
-if [ -z "$CLANG" -o -z "$CLANGXX" ]
+if [ -z "$CLANG" -o -z "$CLANGXX" -o -z "$LLVM_CONFIG" ]
 then
     echo -e \
         "${GREEN}$0${OFF}: ${YELLOW}warning${OFF}: clang-4.0 is not installed!"
@@ -185,7 +200,8 @@ then
     BOOTSTRAP_PATH=bootstrap
     CLANG_TMP="$PWD/$BOOTSTRAP_PATH/bin/clang"
     CLANGXX_TMP="$PWD/$BOOTSTRAP_PATH/bin/clang++"
-    if [ ! -x "$CLANG_TMP" -o ! -x "$CLANGXX_TMP" ]
+    LLVM_CONFIG_TMP="$PWD/$BOOTSTRAP_PATH/bin/llvm-config"
+    if [ ! -x "$CLANG_TMP" -o ! -x "$CLANGXX_TMP" -o ! -x "$LLVM_CONFIG_TMP" ]
     then
         echo -e \
         "${GREEN}$0${OFF}: clang-4.0 is not installed; bootstrapping LLVM..."
@@ -193,10 +209,12 @@ then
     fi
     CLANG=$CLANG_TMP
     CLANGXX=$CLANGXX_TMP
+    LLVM_CONFIG=$LLVM_CONFIG_TMP
     HAVE_CLANG_4=true
 fi
 
 BUILD_PATH=build
+BUILD_PLUGIN=yes
 build_llvm $BUILD_PATH
 
 echo -e "${GREEN}$0${OFF}: installing the LowFat pointer info tool..."

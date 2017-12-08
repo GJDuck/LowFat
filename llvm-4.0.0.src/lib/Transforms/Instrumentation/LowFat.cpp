@@ -190,7 +190,7 @@ static cl::opt<bool> option_check_whole_access(
         "opposed to just ptr (increases the number and cost of checks)"));
 static cl::opt<bool> option_no_replace_malloc(
     "lowfat-no-replace-malloc",
-    cl::desc("Do not replace malloc() with LowFat malloc()"
+    cl::desc("Do not replace malloc() with LowFat malloc() "
         "(disables heap protection)"));
 static cl::opt<bool> option_no_replace_alloca(
     "lowfat-no-replace-alloca",
@@ -1794,4 +1794,24 @@ namespace llvm
         return new LowFat();
     }
 }
+
+/*
+ * Boilerplate for LowFat.so loadable module.
+ */
+#ifdef LOWFAT_PLUGIN
+#include "llvm/Transforms/IPO/PassManagerBuilder.h"
+#include "llvm/IRReader/IRReader.h"
+#include "llvm/Support/SourceMgr.h"
+
+static RegisterPass<LowFat> X("lowfat", "LowFat pass");
+
+static void register_pass(const PassManagerBuilder &PMB,
+    legacy::PassManagerBase &PM)
+{
+    PM.add(new LowFat());
+}
+
+static RegisterStandardPasses RegisterPass(
+    PassManagerBuilder::EP_LoopOptimizerEnd, register_pass);
+#endif      /* LOWFAT_PLUGIN */
 
