@@ -381,6 +381,9 @@ Singapore under its National Cybersecurity R&D Program
 (TSUNAMi project, No. NRF2014NCR-NCR001-21) and administered
 by the National Cybersecurity R&D Directorate.
 
+This research was partially supported by the UK EPSRC research grant
+EP/L022710/1.
+
 Bugs
 ----
 
