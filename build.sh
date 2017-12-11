@@ -118,6 +118,13 @@ else
     echo -e "${GREEN}$0${OFF}: using custom LowFat configuration ($CONFIG)..."
 fi
 
+CMAKE=`which cmake`
+if [ -z "$CMAKE" ]
+then
+    echo -e "${GREEN}$0${OFF}: ${RED}ERROR${OFF}: cmake is not installed!"
+    exit 1
+fi
+
 CLANG=`which clang-4.0`
 CLANGXX=`which clang++-4.0`
 LLVM_CONFIG=`which llvm-config-4.0`
