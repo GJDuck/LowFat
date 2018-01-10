@@ -298,6 +298,11 @@ A better solution to this problem is left as future work.
 * **LowFat Runtime Hardening**: The LowFat runtime itself has not been hardened.
 By design, some internal tables may overflow (read) for large invalid pointer
 values.
+* **Spectre**:
+LowFat cannot prevent OOB-reads due to speculative execution on vulnerable
+CPUs.  For more information, see the
+[Spectre](https://spectreattack.com/spectre.pdf) paper.  We believe this bug
+similarly affects other bounds-check instrumentation systems.
 * **Low Level Hacks**:
 The LowFat runtime system uses a few very low-level hacks to try and implement
 necessary functionality, such as moving the program stack and cleaning up stacks
