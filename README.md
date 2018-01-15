@@ -42,7 +42,7 @@ value.  As an example, consider the allocation:
 
         p = malloc(10);
 
-The LowFat system will allocation `p = 0x8997f2820` (or similar value).
+The LowFat system will allocate `p = 0x8997f2820` (or similar value).
 Under the default LowFat configuration, addresses `0x800000000-0xfffffffff`
 are reserved for objects of size `1-16` bytes (the original allocation size of
 10bytes is "rounded up" to 16bytes, as is common practice with `malloc`
