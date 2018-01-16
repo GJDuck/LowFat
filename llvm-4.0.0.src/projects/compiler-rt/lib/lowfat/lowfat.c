@@ -582,7 +582,7 @@ extern void lowfat_oob_check(unsigned info, const void *ptr, size_t size0,
     size_t size = lowfat_size(baseptr);
     size_t diff = (size_t)((const uint8_t *)ptr - (const uint8_t *)baseptr);
     size -= size0;
-    if (diff > size)
+    if (diff >= size)
         lowfat_oob_error(info, ptr, baseptr);
 }
 

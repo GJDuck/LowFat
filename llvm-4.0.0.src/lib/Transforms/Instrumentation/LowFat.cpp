@@ -1049,7 +1049,7 @@ static void insertBoundsCheck(const DataLayout *DL, Instruction *I, Value *Ptr,
         if (auto *PtrTy = dyn_cast<PointerType>(Ty))
         {
             Ty = PtrTy->getElementType();
-            size = DL->getTypeAllocSize(Ty);
+            size = DL->getTypeAllocSize(Ty)-1;
         }
     }
     Value *Size = builder.getInt64(size);
@@ -1188,7 +1188,7 @@ static void addLowFatFuncs(Module *M)
         Value *IPtr = builder.CreatePtrToInt(Ptr, builder.getInt64Ty());
         Value *Diff = builder.CreateSub(IPtr, IBasePtr);
         Size = builder.CreateSub(Size, AccessSize);
-        Value *Cmp = builder.CreateICmpUGT(Diff, Size);
+        Value *Cmp = builder.CreateICmpUGE(Diff, Size);
         builder.CreateCondBr(Cmp, Error, Return);
         
         IRBuilder<> builder2(Error);
