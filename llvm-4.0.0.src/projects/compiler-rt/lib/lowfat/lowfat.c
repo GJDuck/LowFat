@@ -49,8 +49,6 @@
     __asm__ __volatile__ ("cpuid" : "=a" (ax), "=b" (bx), "=c" (cx),        \
         "=d" (dx) : "a" (a), "c" (c))
 
-#include "lowfat.h"
-
 #define LOWFAT_SIZES            _LOWFAT_SIZES
 #define LOWFAT_MAGICS           _LOWFAT_MAGICS
 
@@ -64,6 +62,7 @@ static LOWFAT_NOINLINE LOWFAT_NORETURN void lowfat_error(
 static LOWFAT_NOINLINE void lowfat_warning(const char *format, ...);
 
 #include "lowfat_config.c"
+#include "lowfat.h"
 
 static LOWFAT_DATA uint8_t *lowfat_seed = NULL;
 static LOWFAT_DATA size_t lowfat_seed_pos = LOWFAT_PAGE_SIZE;

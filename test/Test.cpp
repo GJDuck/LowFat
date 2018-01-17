@@ -67,6 +67,23 @@ static bool thread = false;
         }                                                                   \
     } while (false)
 
+#define TEST_KIND(ptr, kind)                                                \
+    do {                                                                    \
+        total++;                                                            \
+        printf("[%.4zu] ", total);                                          \
+        if (!lowfat_is_##kind##_ptr(ptr)) {                                 \
+            printf("\33[31mFAILED\33[0m %p is a " STRING(kind) " ptr "      \
+                "\33[33m[got %s]\33[0m\n",                                  \
+                (ptr), getKind(ptr));                                       \
+            failed++;                                                       \
+        } else {                                                            \
+            printf("\33[32mpassed\33[0m: %p isa " STRING(kind) " ptr\n",    \
+                (ptr));                                                     \
+            passed++;                                                       \
+        }                                                                   \
+    } while (false)
+
+
 void *ptr = nullptr;
 char buf[1000];
 
@@ -96,7 +113,12 @@ static uint16_t global4xi16[4];
 static uint32_t global4xi32[4];
 static uint64_t global4xi64[4];
 
-static NOINLINE const char *getKind(void *ptr)
+static bool lowfat_is_nonfat_ptr(const void *ptr)
+{
+    return !lowfat_is_ptr(ptr);
+}
+
+static NOINLINE const char *getKind(const void *ptr)
 {
     const char *kind = "nonfat";
     if (lowfat_is_heap_ptr(ptr))
@@ -255,199 +277,239 @@ static void *worker(void *arg)
         const int SIZE = 8;
         uint8_t *xs = (uint8_t *)__libc_malloc(SIZE * sizeof(uint8_t));
         sum += testBuffer<uint8_t, SIZE>(xs);
+        TEST_KIND(xs, nonfat);
         free(xs);
     }
     {
         const int SIZE = 4;
         uint16_t *xs = (uint16_t *)__libc_malloc(SIZE * sizeof(uint16_t));
         sum += testBuffer<uint16_t, SIZE>(xs);
+        TEST_KIND(xs, nonfat);
         free(xs);
     }
     {
         const int SIZE = 4;
         uint32_t *xs = (uint32_t *)__libc_malloc(SIZE * sizeof(uint32_t));
         sum += testBuffer<uint32_t, SIZE>(xs);
+        TEST_KIND(xs, nonfat);
         free(xs);
     }
     {
         const int SIZE = 4;
         uint64_t *xs = (uint64_t *)__libc_malloc(SIZE * sizeof(uint64_t));
         sum += testBuffer<uint64_t, SIZE>(xs);
+        TEST_KIND(xs, nonfat);
         free(xs);
     }
     {
         const int SIZE = 8;
         uint8_t *xs = (uint8_t *)malloc(SIZE * sizeof(uint8_t));
         sum += testBuffer<uint8_t, SIZE>(xs);
+        TEST_KIND(xs, heap);
         free(xs);
     }
     {
         const int SIZE = 4;
         uint16_t *xs = (uint16_t *)malloc(SIZE * sizeof(uint16_t));
         sum += testBuffer<uint16_t, SIZE>(xs);
+        TEST_KIND(xs, heap);
         free(xs);
     }
     {
         const int SIZE = 4;
         uint32_t *xs = (uint32_t *)malloc(SIZE * sizeof(uint32_t));
         sum += testBuffer<uint32_t, SIZE>(xs);
+        TEST_KIND(xs, heap);
         free(xs);
     }
     {
         const int SIZE = 4;
         uint64_t *xs = (uint64_t *)malloc(SIZE * sizeof(uint64_t));
         sum += testBuffer<uint64_t, SIZE>(xs);
+        TEST_KIND(xs, heap);
         free(xs);
     }
     {
         const int SIZE = 8;
         uint8_t xs[SIZE];
         sum += testBuffer<uint8_t, SIZE>(xs);
+        TEST_KIND(xs, stack);
     }
     {
         const int SIZE = 4;
         uint16_t xs[SIZE];
         sum += testBuffer<uint16_t, SIZE>(xs);
+        TEST_KIND(xs, stack);
     }
     {
         const int SIZE = 4;
         uint32_t xs[SIZE];
         sum += testBuffer<uint32_t, SIZE>(xs);
+        TEST_KIND(xs, stack);
     }
     {
         const int SIZE = 4;
         uint64_t xs[SIZE];
         sum += testBuffer<uint64_t, SIZE>(xs);
+        TEST_KIND(xs, stack);
     }
 #ifndef _LOWFAT_LEGACY
     {
         const int SIZE = 8;
         uint8_t xs[id(SIZE)];
         sum += testBuffer<uint8_t, SIZE>(xs);
+        TEST_KIND(xs, stack);
     }
     {
         const int SIZE = 4;
         uint16_t xs[id(SIZE)];
         sum += testBuffer<uint16_t, SIZE>(xs);
+        TEST_KIND(xs, stack);
     }
     {
         const int SIZE = 4;
         uint32_t xs[id(SIZE)];
         sum += testBuffer<uint32_t, SIZE>(xs);
+        TEST_KIND(xs, stack);
     }
     {
         const int SIZE = 4;
         uint64_t xs[id(SIZE)];
         sum += testBuffer<uint64_t, SIZE>(xs);
+        TEST_KIND(xs, stack);
     }
 #endif
     {
         const int SIZE = 8;
         sum += testBuffer<uint8_t, SIZE>(global8xi8);
+        TEST_KIND(global8xi8, global);
     }
     {
         const int SIZE = 4;
         sum += testBuffer<uint16_t, SIZE>(global4xi16);
+        TEST_KIND(global4xi16, global);
     }
     {
         const int SIZE = 4;
         sum += testBuffer<uint32_t, SIZE>(global4xi32);
+        TEST_KIND(global4xi32, global);
     }
     {
         const int SIZE = 4;
         sum += testBuffer<uint64_t, SIZE>(global4xi64);
+        TEST_KIND(global4xi64, global);
     }
     {
         Test<uint32_t> *t = (Test<uint32_t> *)__libc_malloc(8);
         sum += testField<uint32_t>(*t);
+        TEST_KIND(t, nonfat);
         free(t);
     }
     {
         Test<uint64_t> *t = (Test<uint64_t> *)__libc_malloc(8);
         sum += testField<uint64_t>(*t);
+        TEST_KIND(t, nonfat);
         free(t);
     }
     {
         Test<uint32_t> *t = (Test<uint32_t> *)malloc(8);
         sum += testField<uint32_t>(*t);
+        TEST_KIND(t, heap);
         free(t);
     }
     {
         Test<uint64_t> *t = (Test<uint64_t> *)malloc(8);
         sum += testField<uint64_t>(*t);
+        TEST_KIND(t, heap);
         free(t);
     }
     {
         char tmp[8];
         Test<uint32_t> *t = (Test<uint32_t> *)tmp;
         sum += testField<uint32_t>(*t);
+        TEST_KIND(t, stack);
     }
     {
         char tmp[8];
         Test<uint64_t> *t = (Test<uint64_t> *)tmp;
         sum += testField<uint64_t>(*t);
+        TEST_KIND(t, stack);
     }
 #ifndef _LOWFAT_LEGACY
     {
         char tmp[id(8)];
         Test<uint32_t> *t = (Test<uint32_t> *)tmp;
         sum += testField<uint32_t>(*t);
+        TEST_KIND(t, stack);
     }
     {
         char tmp[id(8)];
         Test<uint64_t> *t = (Test<uint64_t> *)tmp;
         sum += testField<uint64_t>(*t);
+        TEST_KIND(t, stack);
     }
 #endif
     {
         Test<uint32_t> *t = (Test<uint32_t> *)&global8xi8;
         sum += testField<uint32_t>(*t);
+        TEST_KIND(t, global);
     }
     {
         Test<uint64_t> *t = (Test<uint64_t> *)&global8xi8;
         sum += testField<uint64_t>(*t);
+        TEST_KIND(t, global);
     }
     {
         void *ptr = __libc_malloc(8);
         sum += testEdge(ptr);
+        TEST_KIND(ptr, nonfat);
         free(ptr);
     }
     {
         void *ptr = malloc(8);
         sum += testEdge(ptr);
+        TEST_KIND(ptr, heap);
         free(ptr);
     }
     {
         char tmp[8];
         sum += testEdge((void *)tmp);
+        TEST_KIND(tmp, stack);
     }
 #ifndef _LOWFAT_LEGACY
     {
         char tmp[id(8)];
         sum += testEdge((void *)tmp);
+        TEST_KIND(tmp, stack);
     }
 #endif
     {
         sum += testEdge((void *)global8xi8);
+        TEST_KIND(global8xi8, global);
     }
     {
         char *str = (char *)__libc_malloc(15);
         strcpy(str, "Hello World!");
         sum += testString(str);
+        TEST_KIND(str, nonfat);
         free(str);
     }
     {
         char *str = (char *)malloc(15);
         strcpy(str, "Hello World!");
         sum += testString(str);
+        TEST_KIND(str, heap);
         free(str);
     }
     {
-        char str[] = "Hello World!";;
+        char str[] = "Hello World!";
         sum += testString(str);
+        TEST_KIND(str, stack);
     }
     {
-        sum += testString("Hello World!");
+        const char *str = "Hello World!";
+        sum += testString(str);
+        TEST_KIND(str, global);
     }
 
     return (void *)(uintptr_t)sum;

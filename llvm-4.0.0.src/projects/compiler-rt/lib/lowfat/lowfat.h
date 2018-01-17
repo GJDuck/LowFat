@@ -91,14 +91,14 @@ static inline _LOWFAT_CONST _LOWFAT_INLINE size_t lowfat_size(const void *_ptr)
 static inline _LOWFAT_CONST _LOWFAT_INLINE void *lowfat_base(const void *_ptr)
 {
     size_t _idx = lowfat_index(_ptr);
-#ifndef LOWFAT_USE_POW2_CONFIG
+#ifndef LOWFAT_IS_POW2
     unsigned __int128 _tmp = (unsigned __int128)_LOWFAT_MAGICS[_idx] *
         (unsigned __int128)(uintptr_t)_ptr;
     size_t _objidx = (size_t)(_tmp >> 64);
     return (void *)(_objidx * _LOWFAT_SIZES[_idx]);
-#else   /* LOWFAT_USE_POW2_CONFIG */
+#else   /* LOWFAT_IS_POW2 */
     return (void *)((uintptr_t)_ptr & _LOWFAT_MAGICS[_idx]);
-#endif  /* LOWFAT_USE_POW2_CONFIG */
+#endif  /* LOWFAT_IS_POW2 */
 }
 
 /*

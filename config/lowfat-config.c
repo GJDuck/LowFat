@@ -591,7 +591,8 @@ static void compile(FILE *stream, FILE *hdr_stream, FILE *ld_stream,
     fprintf(stream, "\n");
     fprintf(stream, "#include \"lowfat_config.h\"\n");
     fprintf(stream, "\n");
-    fprintf(stream, "#define LOWFAT_IS_POW2 %u\n", pow2);
+    if (pow2)
+        fprintf(stream, "#define LOWFAT_IS_POW2 1\n");
     fprintf(stream, "#define LOWFAT_NUM_REGIONS %zu\n", sizes_len);
     size_t num_pages = (sizes_len * sizeof(size_t) - 1) / PAGE_SIZE + 1;
     fprintf(stream, "#define LOWFAT_SIZES_PAGES %zu\n", num_pages);
@@ -608,7 +609,7 @@ static void compile(FILE *stream, FILE *hdr_stream, FILE *ld_stream,
     size_t stack_size = STACK_SIZE;
     fprintf(stream, "#define LOWFAT_STACK_SIZE %zu\n", stack_size);
     fprintf(stream, "#define LOWFAT_PAGE_SIZE %u\n", PAGE_SIZE);
-    fprintf(stream, "#define LOWFAT_HEAP_ASLR_MASK 0x%.8X\n",
+    fprintf(stream, "#define LOWFAT_HEAP_ASLR_MASK 0x%.8Xull\n",
         ASLR_MASK);
     fprintf(stream, "#define LOWFAT_MAX_HEAP_ALLOC_SIZE %zu\n",
         sizes[sizes_len-1]);
