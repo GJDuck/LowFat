@@ -61,3 +61,16 @@ Index: llvm-4.0.0.src/projects/compiler-rt/lib/tsan/rtl/tsan_platform_linux.cc
    for (int i = 0; i < MAXNS && cnt < nfd; i++) {
      if (statp->_u._ext.nsaddrs[i] && statp->_u._ext.nssocks[i] != -1)
        fds[cnt++] = statp->_u._ext.nssocks[i];
+Index: llvm-4.0.0.src/projects/compiler-rt/lib/esan/esan_sideline_linux.cpp
+===================================================================
+--- llvm-4.0.0.src/projects/compiler-rt/lib/esan/esan_sideline_linux.cpp
++++ llvm-4.0.0.src/projects/compiler-rt/lib/esan/esan_sideline_linux.cpp
+@@ -70,7 +70,7 @@ int SidelineThread::runSideline(void *Arg) {
+
+   // Set up a signal handler on an alternate stack for safety.
+   InternalScopedBuffer<char> StackMap(SigAltStackSize);
+-  struct sigaltstack SigAltStack;
++  stack_t SigAltStack;
+   SigAltStack.ss_sp = StackMap.data();
+   SigAltStack.ss_size = SigAltStackSize;
+   SigAltStack.ss_flags = 0;
