@@ -59,6 +59,7 @@ build_llvm()
     cp config/lowfat.ld $BUILD_PATH/lib/LowFat/
     
     echo -e "${GREEN}$0${OFF}: will now build LLVM..."
+    patch -p0 < bug81066.patch
     cd $BUILD_PATH
     
     if [ $CONFIGURE = true ]
@@ -69,6 +70,7 @@ build_llvm()
     PARALLEL=`grep -c ^processor /proc/cpuinfo`
     make -j $PARALLEL
     cd ..
+    patch -p0 -R < bug81066.patch
     echo
 
     if [ $BUILD_PLUGIN = yes ]
