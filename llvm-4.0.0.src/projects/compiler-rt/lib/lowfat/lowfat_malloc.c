@@ -309,7 +309,7 @@ extern int lowfat_posix_memalign(void **memptr, size_t align, size_t size)
     if (align == LOWFAT_MIN_ALLOC_SIZE)
         *memptr = lowfat_malloc(size);
     else if (size < align)
-        *memptr = lowfat_malloc(align);
+        *memptr = lowfat_malloc(align-1);
     else
     {
         size_t nsize = size + align - 1;
