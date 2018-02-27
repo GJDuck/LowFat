@@ -361,8 +361,10 @@ multi-threaded code (shared state in contention).
 * **Use-after-free, or**
 * **Type confusion errors?**
 
-A: Yes with the suitable extensions.  We plan to release an extended system
-sometime in 2018.
+A: Yes with suitable extensions.  Our paper "*EffectiveSan: Type and
+Memory Error Detection using Dynamically Typed C/C++*" was (conditionally)
+accepted at PLDI'2018.  We plan to release EffectiveSan sometime in 2018
+(see here: https://github.com/GJDuck/EffectiveSan).
 
 Versions
 --------
