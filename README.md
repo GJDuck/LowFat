@@ -123,11 +123,11 @@ LowFat is implemented as a modified version of `clang-4.0`.  To compile a
 program (`prog.c`) with LowFat instrumentation enabled, simply compile as
 follows:
 
-        $ /path/to/lowfat/build/bin/clang -fsanitize=lowfat -O2 -c prog prog.c
+        $ /path/to/lowfat/build/bin/clang -fsanitize=lowfat -O2 -o prog prog.c
 
 C++ is also supported:
 
-        $ /path/to/lowfat/build/bin/clang++ -fsanitize=lowfat -O2 -c prog prog.cpp
+        $ /path/to/lowfat/build/bin/clang++ -fsanitize=lowfat -O2 -o prog prog.cpp
 
 LowFat supports several command line options that are listed below.
 Note that to pass an option to LowFat it must be preceded by `-mllvm` on the
@@ -325,6 +325,12 @@ one-past-end-of-the-array) is always within the allocation bounds.  This trick
 was "borrowed" from the Boehm conservative garbage collector, which must also
 handle such pointers to avoid erroneously collecting live objects.
 
+**Q: Can LowFat protect global variables?**
+
+A: Yes, for *statically* allocated globals.  Support for globals was only
+added after the publication of [1] and [2].  For more details regarding
+globals, see our technical report [3].
+
 **Q: Why do we need LowFat when we already have AddressSanitizer?**
 
 LowFat and AddressSanitizer are similar tools in that both can detect
@@ -362,7 +368,7 @@ multi-threaded code (shared state in contention).
 * **Type confusion errors?**
 
 A: Yes with suitable extensions.  Our paper "*EffectiveSan: Type and
-Memory Error Detection using Dynamically Typed C/C++*" was (conditionally)
+Memory Error Detection using Dynamically Typed C/C++*" was
 accepted at PLDI'2018.  We plan to release EffectiveSan sometime in 2018
 (see here: https://github.com/GJDuck/EffectiveSan).
 
@@ -411,4 +417,7 @@ International Conference on Compiler Construction, 2016
 [2] Gregory J. Duck, Roland H. C. Yap, Lorenzo Cavallaro, [Stack Bounds
 Protection with Low Fat Pointers](https://www.comp.nus.edu.sg/~gregory/papers/ndss17stack.pdf),
 The Network and Distributed System Security Symposium, 2017
+
+[3] Gregory J. Duck, Roland H. C. Yap, [An Extended Low Fat Allocator API and
+Applications](https://www.comp.nus.edu.sg/~gregory/papers/lowfat2018.pdf), Technical Report, 2018.
 
