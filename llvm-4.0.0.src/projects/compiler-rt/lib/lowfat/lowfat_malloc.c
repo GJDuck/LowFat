@@ -236,8 +236,31 @@ extern void lowfat_free(void *ptr)
 // library.
 extern void free(void *ptr) LOWFAT_ALIAS("lowfat_free");
 extern void *realloc(void *ptr, size_t size) LOWFAT_ALIAS("lowfat_realloc");
+extern void _ZdlPv(void *ptr) LOWFAT_ALIAS("lowfat_free");
+extern void _ZdaPv(void *ptr) LOWFAT_ALIAS("lowfat_free");
+
 #ifndef LOWFAT_NO_REPLACE_STD_MALLOC
 extern void *malloc(size_t size) LOWFAT_ALIAS("lowfat_malloc");
+extern void *calloc(size_t nmemb, size_t size) LOWFAT_ALIAS("lowfat_calloc");
+extern int posix_memalign(void **memptr, size_t align, size_t size)
+    LOWFAT_ALIAS("lowfat_posix_memalign");
+extern void *memalign(size_t align, size_t size)
+    LOWFAT_ALIAS("lowfat_memalign");
+extern void *valloc(size_t size) LOWFAT_ALIAS("lowfat_valloc");
+extern void *pvalloc(size_t size) LOWFAT_ALIAS("lowfat_pvalloc");
+extern void *_Znwm(size_t size) LOWFAT_ALIAS("lowfat_malloc");
+extern void *_Znam(size_t size) LOWFAT_ALIAS("lowfat_malloc");
+extern void *_ZnwmRKSt9nothrow_t(size_t size) LOWFAT_ALIAS("lowfat_malloc");
+extern void *_ZnamRKSt9nothrow_t(size_t size) LOWFAT_ALIAS("lowfat_malloc");
+#ifdef __strdup
+#undef __strdup
+#endif
+extern char *__strdup(const char *str) LOWFAT_ALIAS("lowfat_strdup");
+#ifdef __strndup
+#undef __strndup
+#endif
+extern char *__strndup(const char *str, size_t n)
+	LOWFAT_ALIAS("lowfat_strndup");
 #endif      /* LOWFAT_NO_REPLACE_STD_MALLOC */
 
 /*

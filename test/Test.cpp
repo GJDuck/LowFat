@@ -7,7 +7,7 @@
  * 
  * Gregory J. Duck.
  *
- * Copyright (c) 2017 The National University of Singapore.
+ * Copyright (c) 2018 The National University of Singapore.
  * All rights reserved.
  *
  * This file is distributed under the University of Illinois Open Source
@@ -77,12 +77,25 @@ static bool thread = false;
                 (ptr), getKind(ptr));                                       \
             failed++;                                                       \
         } else {                                                            \
-            printf("\33[32mpassed\33[0m: %p isa " STRING(kind) " ptr\n",    \
+            printf("\33[32mpassed\33[0m: %p is a " STRING(kind) " ptr\n",    \
                 (ptr));                                                     \
             passed++;                                                       \
         }                                                                   \
     } while (false)
 
+#define TEST_FREE(statement)                                                \
+    do {                                                                    \
+        total++;                                                            \
+        printf("[%.4zu] ", total);                                          \
+        bool ok = statement;                                                \
+        if (!ok) {                                                          \
+             printf("\33[31mFAILED\33[0m " STRING(statement) "\n");         \
+             failed++;                                                      \
+        } else {                                                            \
+            printf("\33[32mpassed\33[0m: " STRING(statement) "\n");         \
+            passed++;                                                       \
+        }                                                                   \
+    } while (false)
 
 void *ptr = nullptr;
 char buf[1000];
@@ -107,6 +120,9 @@ template <typename T> extern void escape(T *ptr);
 extern void escape(uintptr_t i);
 template <typename T> extern T *doreturn(T *ptr, int offset);
 extern size_t id(size_t size);
+extern bool myFree(void *ptr);
+extern bool myDelete(int *ptr);
+extern bool myRealloc(void *ptr);
 
 static uint8_t global8xi8[8];
 static uint16_t global4xi16[4];
@@ -578,6 +594,22 @@ int main(int argc, char **argv)
     {
         printf("error: pthread_join failed\n");
         return EXIT_FAILURE;
+    }
+
+    // Test indirect frees (e.g., by a library).  If this does not work
+    // then the program will crash.
+    printf("\n\33[35m*** FREE ***\33[0m\n");
+    {
+        void *ptr = malloc(16);
+        TEST_FREE(myFree(ptr));
+    }
+    {
+        void *ptr = malloc(16);
+        TEST_FREE(myRealloc(ptr));
+    }
+    {
+        int *ptr = new int;
+        TEST_FREE(myDelete(ptr));
     }
 
     printf("\n\33[1;35mpassed\33[0m: (%zu/%zu) = \33[1m%.2f%%\33[0m\n\n",
