@@ -66,19 +66,19 @@ static LOWFAT_NOINLINE void lowfat_warning(const char *format, ...);
 
 static LOWFAT_DATA uint8_t *lowfat_seed = NULL;
 static LOWFAT_DATA size_t lowfat_seed_pos = LOWFAT_PAGE_SIZE;
+static LOWFAT_DATA bool lowfat_malloc_inited = false;
 
 #ifndef LOWFAT_DATA_ONLY
 #include "lowfat_threads.c"
 #include "lowfat_malloc.c"
 #include "lowfat_memops.c"
-#ifndef LOWFAT_NO_MEMORY_ALIAS
+#if !defined(LOWFAT_NO_MEMORY_ALIAS) && !defined(LOWFAT_STANDALONE)
 #include "lowfat_fork.c"
 #endif
 #endif
 
 static LOWFAT_DATA lowfat_mutex_t lowfat_print_mutex;
 static LOWFAT_DATA size_t lowfat_num_messages = 0;
-static LOWFAT_DATA bool lowfat_malloc_inited = false;
 
 extern size_t lowfat_get_num_errors(void)
 {
@@ -389,6 +389,14 @@ void LOWFAT_CONSTRUCTOR lowfat_init(void)
             goto mmap_error;
     }
 
+    // Initialize malloc()
+    if (!lowfat_malloc_init())
+        lowfat_error("failed to initialize lowfat malloc(): %s",
+            strerror(errno));
+    lowfat_malloc_inited = true;
+
+#ifndef LOWFAT_STANDALONE
+
     // Init regions for the stack
 #ifndef LOWFAT_NO_MEMORY_ALIAS
     {
@@ -423,12 +431,6 @@ void LOWFAT_CONSTRUCTOR lowfat_init(void)
     }
 #endif /* LOWFAT_NO_MEMORY_ALIAS */
 
-    // Initialize malloc()
-    if (!lowfat_malloc_init())
-        lowfat_error("failed to initialize lowfat malloc(): %s",
-            strerror(errno));
-    lowfat_malloc_inited = true;
-
     // Initialize multi-threading
     if (!lowfat_threads_init())
         lowfat_error("failed to initialize lowfat threads: %s",
@@ -452,6 +454,7 @@ void LOWFAT_CONSTRUCTOR lowfat_init(void)
     // Replace stack with LOWFAT stack.
     lowfat_stack_pivot();
 
+#endif /* LOWFAT_STANDALONE */
 #endif /* LOWFAT_DATA_ONLY */
 }
 
@@ -585,7 +588,7 @@ extern void lowfat_oob_check(unsigned info, const void *ptr, size_t size0,
         lowfat_oob_error(info, ptr, baseptr);
 }
 
-#ifndef LOWFAT_DATA_ONLY
+#if !defined(LOWFAT_DATA_ONLY) && !defined(LOWFAT_STANDALONE)
 /*
  * Perform a "stack pivot"; replacing the stack with the LOWFAT stack.
  * Unfortunately there is no way in Linux to specify the location of the stack

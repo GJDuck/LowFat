@@ -54,6 +54,8 @@ static inline void lowfat_mutex_unlock(lowfat_mutex_t *mutex)
 
 #endif  /* LOWFAT_NO_THREADS */
 
+#ifndef LOWFAT_STANDALONE
+
 #define LOWFAT_NUM_THREAD_STACKS                                            \
     (LOWFAT_STACK_MEMORY_SIZE / LOWFAT_STACK_SIZE)
 #define LOWFAT_STACKS_START                                                 \
@@ -292,4 +294,10 @@ extern int pthread_create(pthread_t *thread,
 }
 
 #endif  /* LOWFAT_NO_THREADS */
+
+#else   /* LOWFAT_STANDALONE */
+
+#define lowfat_threads_init()   true
+
+#endif  /* LOWFAT_STANDALONE */
 

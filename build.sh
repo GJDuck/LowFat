@@ -86,6 +86,25 @@ build_llvm()
         rm -f LowFat.o LowFat.dwo
     fi
 
+    if [ $BUILD_STANDALONE = yes ]
+    then
+        echo -e "${GREEN}$0${OFF}: creating liblowfat.preload.so standalone..."
+        if [ $LEGACY = no ]
+        then
+            STANDALONE_OPTS="-mbmi -mbmi2 -mlzcnt"
+        else
+            STANDALONE_OPTS="-mno-bmi -mno-bmi2 -mno-lzcnt"
+        fi
+        $CLANG -D_GNU_SOURCE -DLOWFAT_STANDALONE -fPIC -shared \
+            -o liblowfat.preload.so -std=gnu99 -m64 "-I$PWD/${RUNTIME_PATH}/" \
+            -O2 $STANDALONE_OPTS "$PWD/${RUNTIME_PATH}/lowfat.c"
+        echo -e "${GREEN}$0${OFF}: creating liblowfat.so standalone..."
+        $CLANG -D_GNU_SOURCE -DLOWFAT_STANDALONE \
+            -DLOWFAT_NO_REPLACE_STD_MALLOC -fPIC -shared \
+            -o liblowfat.so -std=gnu99 -m64 "-I$PWD/${RUNTIME_PATH}/" \
+            -O2 $STANDALONE_OPTS "$PWD/${RUNTIME_PATH}/lowfat.c"
+    fi
+
     echo -e "${GREEN}$0${OFF}: cleaning up the LowFat config files..."
     rm -f "$PWD/${RUNTIME_PATH}/lowfat_config.h" \
           "$PWD/${RUNTIME_PATH}/lowfat_config.c" \
@@ -224,6 +243,7 @@ fi
 
 BUILD_PATH=build
 BUILD_PLUGIN=yes
+BUILD_STANDALONE=yes
 build_llvm $BUILD_PATH
 
 echo -e "${GREEN}$0${OFF}: installing the LowFat pointer info tool..."
