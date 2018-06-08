@@ -7,7 +7,7 @@
  * 
  * Gregory J. Duck.
  *
- * Copyright (c) 2017 The National University of Singapore.
+ * Copyright (c) 2018 The National University of Singapore.
  * All rights reserved.
  *
  * This file is distributed under the University of Illinois Open Source
@@ -594,7 +594,7 @@ static Bounds getPtrBounds(const TargetLibraryInfo *TLI, const DataLayout *DL,
     {
         size_t numValues = PHI->getNumIncomingValues();
         bounds = Bounds::nonFat();
-        boundsInfo.insert(make_pair(Ptr, Bounds::nonFat()));
+        boundsInfo.insert(make_pair(Ptr, Bounds::unknown()));
         for (size_t i = 0; i < numValues; i++)
         {
             Bounds boundsIn = getPtrBounds(TLI, DL, PHI->getIncomingValue(i),
