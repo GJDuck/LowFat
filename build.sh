@@ -67,8 +67,7 @@ build_llvm()
         CC=$CLANG CXX=$CLANGXX cmake ../llvm-4.0.0.src/ \
             -DCMAKE_BUILD_TYPE=Release
     fi
-    PARALLEL=`grep -c ^processor /proc/cpuinfo`
-    make -j $PARALLEL
+    make -j `nproc`
     cd ..
     patch -p0 -R < bug81066.patch
     echo
