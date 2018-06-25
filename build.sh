@@ -30,7 +30,7 @@ build_llvm()
 
     if [ ! -f "$PWD/${RUNTIME_PATH}/CMakeLists.txt" ]
     then
-        if [ $LEGACY = no ]
+        if [ x$LEGACY = xno ]
         then
             ln -fs "$PWD/${RUNTIME_PATH}/CMakeLists.txt.modern" \
                 "$PWD/${RUNTIME_PATH}/CMakeLists.txt"
@@ -62,18 +62,17 @@ build_llvm()
     patch -p0 < bug81066.patch
     cd $BUILD_PATH
     
-    if [ $CONFIGURE = true ]
+    if [ x$CONFIGURE = xtrue ]
     then
         CC=$CLANG CXX=$CLANGXX cmake ../llvm-4.0.0.src/ \
             -DCMAKE_BUILD_TYPE=Release
     fi
-    PARALLEL=`grep -c ^processor /proc/cpuinfo`
-    make -j $PARALLEL
+    make -j `nproc`
     cd ..
     patch -p0 -R < bug81066.patch
     echo
 
-    if [ $BUILD_PLUGIN = yes ]
+    if [ x$BUILD_PLUGIN = xyes ]
     then
         echo -e "${GREEN}$0${OFF}: creating LowFat.so plugin..."
         # These should not fail if we got this far:
@@ -86,7 +85,7 @@ build_llvm()
         rm -f LowFat.o LowFat.dwo
     fi
 
-    if [ $BUILD_STANDALONE = yes ]
+    if [ x$BUILD_STANDALONE = xyes ]
     then
         echo -e "${GREEN}$0${OFF}: creating liblowfat.preload.so standalone..."
         if [ $LEGACY = no ]
@@ -213,7 +212,7 @@ else
     CHECK=false
 fi
 
-if [ $CHECK != true ]
+if [ x$CHECK != xtrue ]
 then
     echo -e "${GREEN}$0${OFF}: ${RED}ERROR${OFF}: configuration check failed!"
     config/lowfat-check-config
@@ -223,7 +222,7 @@ fi
 echo -e "${GREEN}$0${OFF}: building the LowFat pointer info tool..."
 (cd config; CC=$CLANG CXX=$CLANGXX make lowfat-ptr-info >/dev/null)
 
-if [ $HAVE_CLANG_4 = false ]
+if [ x$HAVE_CLANG_4 = xfalse ]
 then
     BOOTSTRAP_PATH=bootstrap
     CLANG_TMP="$PWD/$BOOTSTRAP_PATH/bin/clang"
@@ -262,7 +261,7 @@ fi
 sed -r "s/\x1B\[([0-9]{1,2}(;[0-9]{1,2})?)?[m|K]//g" < test.tmp > test.log
 rm -f test.tmp
 (cd test; make clean >/dev/null 2>&1)
-if [ $TEST_PASSED = true ]
+if [ x$TEST_PASSED = xtrue ]
 then
     echo "ok"
 else
