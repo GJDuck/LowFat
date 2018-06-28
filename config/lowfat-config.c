@@ -32,7 +32,7 @@
 #define MIN_SIZES               8
 #define MAX_SIZES               4096
 #define MIN_SIZE                16
-#define MIN_REGION_SIZE         16
+#define MIN_REGION_SIZE         32
 #define MAX_REGION_SIZE         1024
 #define MB                      0x100000ul
 #define GB                      0x40000000ul

@@ -63,8 +63,13 @@ static void *lowfat_fallback_malloc(size_t size)
 #endif      /* LOWFAT_NO_STD_MALLOC_FALLBACK */
 }
 
+#ifdef LOWFAT_NO_REPLACE_STD_MALLOC
+#define lowfat_fallback_free(x)         free(x)
+#define lowfat_fallback_realloc(x, y)   realloc((x), (y))
+#else
 #define lowfat_fallback_free(x)         __libc_free(x)
 #define lowfat_fallback_realloc(x, y)   __libc_realloc((x), (y))
+#endif      /* LOWFAT_NO_REPLACE_STD_MALLOC */
 
 /*
  * Initialize the lowfat_malloc() state.
@@ -140,8 +145,8 @@ extern void *lowfat_malloc_index(size_t idx, size_t size)
         {
             uint8_t *prot_ptr = (uint8_t *)LOWFAT_PAGES_BASE(ptr);
             size_t prot_size = LOWFAT_PAGES_SIZE(ptr, size);
-            mprotect(prot_ptr + LOWFAT_PAGE_SIZE,
-                prot_size - LOWFAT_PAGE_SIZE, PROT_READ | PROT_WRITE);
+            lowfat_protect(prot_ptr + LOWFAT_PAGE_SIZE,
+                prot_size - LOWFAT_PAGE_SIZE, true, true);
 
             // Any remaining pages should be PROT_NONE as enforced by
             // lowfat_free().  These serve as guard pages.
@@ -171,7 +176,7 @@ extern void *lowfat_malloc_index(size_t idx, size_t size)
         if (prot_size < LOWFAT_BIG_OBJECT)
             prot_size = LOWFAT_BIG_OBJECT;
         // Syscall while holding the mutex... :(
-        mprotect(prot_ptr, prot_size, PROT_READ | PROT_WRITE);
+        lowfat_protect(prot_ptr, prot_size, true, true);
         info->accessptr = prot_ptr + prot_size;
     }
     
@@ -221,10 +226,10 @@ extern void lowfat_free(void *ptr)
             ((uintptr_t)prot_end_ptr % LOWFAT_PAGE_SIZE);
         size_t prot_size = prot_end_ptr - prot_ptr;
 
-        madvise(prot_ptr + LOWFAT_PAGE_SIZE, prot_size - LOWFAT_PAGE_SIZE,
-            MADV_DONTNEED);
-        mprotect(prot_ptr + LOWFAT_PAGE_SIZE, prot_size - LOWFAT_PAGE_SIZE,
-            PROT_NONE);
+        lowfat_dont_need(prot_ptr + LOWFAT_PAGE_SIZE,
+            prot_size - LOWFAT_PAGE_SIZE);
+        lowfat_protect(prot_ptr + LOWFAT_PAGE_SIZE,
+            prot_size - LOWFAT_PAGE_SIZE, false, false);
     }
 
     lowfat_regioninfo_t info = LOWFAT_REGION_INFO + idx;
@@ -288,7 +293,7 @@ extern void *lowfat_realloc(void *ptr, size_t size)
         {
             void *prot_ptr = LOWFAT_PAGES_BASE(ptr);
             size_t prot_size = LOWFAT_PAGES_SIZE(ptr, alloc_size);
-            mprotect(prot_ptr, prot_size, PROT_READ | PROT_WRITE);
+            lowfat_protect(prot_ptr, prot_size, true, true);
         }
         return ptr;
     }
@@ -311,7 +316,7 @@ extern void *lowfat_realloc(void *ptr, size_t size)
         //       copying.
         void *prot_ptr = LOWFAT_PAGES_BASE(ptr);
         size_t prot_size = LOWFAT_PAGES_SIZE(ptr, ptr_size);
-        mprotect(prot_ptr, prot_size, PROT_READ | PROT_WRITE);
+        lowfat_protect(prot_ptr, prot_size, true, true);
     }
     memcpy(newptr, ptr, cpy_size);
     lowfat_free(ptr);
@@ -449,6 +454,7 @@ extern char *lowfat_strndup(const char *str, size_t n)
     return str2;
 }
 
+#if !defined(LOWFAT_WINDOWS)
 /*
  * LOWFAT malloc_usable_size()
  */
@@ -467,4 +473,5 @@ extern size_t malloc_usable_size(void *ptr)
     }
     return libc_malloc_usable_size(ptr);
 }
+#endif
 

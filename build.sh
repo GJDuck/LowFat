@@ -96,12 +96,12 @@ build_llvm()
         fi
         $CLANG -D_GNU_SOURCE -DLOWFAT_STANDALONE -fPIC -shared \
             -o liblowfat.preload.so -std=gnu99 -m64 "-I$PWD/${RUNTIME_PATH}/" \
-            -O2 $STANDALONE_OPTS "$PWD/${RUNTIME_PATH}/lowfat.c"
+            -DLOWFAT_LINUX -O2 $STANDALONE_OPTS "$PWD/${RUNTIME_PATH}/lowfat.c"
         echo -e "${GREEN}$0${OFF}: creating liblowfat.so standalone..."
         $CLANG -D_GNU_SOURCE -DLOWFAT_STANDALONE \
             -DLOWFAT_NO_REPLACE_STD_MALLOC -fPIC -shared \
             -o liblowfat.so -std=gnu99 -m64 "-I$PWD/${RUNTIME_PATH}/" \
-            -O2 $STANDALONE_OPTS "$PWD/${RUNTIME_PATH}/lowfat.c"
+            -DLOWFAT_LINUX -O2 $STANDALONE_OPTS "$PWD/${RUNTIME_PATH}/lowfat.c"
     fi
 
     echo -e "${GREEN}$0${OFF}: cleaning up the LowFat config files..."

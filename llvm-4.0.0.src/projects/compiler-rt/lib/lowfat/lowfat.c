@@ -24,17 +24,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#include <dlfcn.h>
-#include <sys/mman.h>
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <fcntl.h>
-#include <unistd.h>
-
-#ifndef F_SETLEASE
-#define F_SETLEASE              1024
-#endif
-
 #define LOWFAT_PAGE_SIZE        4096
 #define LOWFAT_MAX_ADDRESS      0x1000000000000ull
 
@@ -53,7 +42,6 @@
 #define LOWFAT_MAGICS           _LOWFAT_MAGICS
 
 static LOWFAT_NOINLINE void lowfat_rand(void *buf, size_t len);
-static int lowfat_create_shm(size_t size);
 static LOWFAT_CONST void *lowfat_region(size_t idx);
 extern LOWFAT_CONST void *lowfat_stack_mirror(void *ptr, size_t idx);
 extern LOWFAT_NOINLINE void lowfat_stack_pivot(void);
@@ -67,6 +55,14 @@ static LOWFAT_NOINLINE void lowfat_warning(const char *format, ...);
 static LOWFAT_DATA uint8_t *lowfat_seed = NULL;
 static LOWFAT_DATA size_t lowfat_seed_pos = LOWFAT_PAGE_SIZE;
 static LOWFAT_DATA bool lowfat_malloc_inited = false;
+
+#ifdef LOWFAT_WINDOWS
+#include "lowfat_windows.c"
+#endif
+
+#ifdef LOWFAT_LINUX
+#include "lowfat_linux.c"
+#endif
 
 #ifndef LOWFAT_DATA_ONLY
 #include "lowfat_threads.c"
@@ -88,28 +84,14 @@ extern size_t lowfat_get_num_errors(void)
 /*
  * CSPRNG
  */
-static LOWFAT_NOINLINE void lowfat_rand(void *buf0, size_t len)
+static void lowfat_rand(void *buf0, size_t len)
 {
     uint8_t *buf = (uint8_t *)buf0;
     while (len > 0)
     {
         if (lowfat_seed_pos >= LOWFAT_PAGE_SIZE)
         {
-            const char *path = "/dev/urandom";
-            int fd = open(path, O_RDONLY);
-            if (fd < 0)
-                lowfat_error("failed to open \"%s\": %s", path,
-                    strerror(errno));
-            ssize_t r = read(fd, lowfat_seed, LOWFAT_PAGE_SIZE);
-            if (r < 0)
-                lowfat_error("failed to read \"%s\": %s", path,
-                    strerror(errno));
-            if (r != LOWFAT_PAGE_SIZE)
-                lowfat_error("failed to read %zu bytes from \"%s\"",
-                    LOWFAT_PAGE_SIZE, path);
-            if (close(fd) < 0)
-                lowfat_error("failed to close \"%s\": %s", path,
-                    strerror(errno));
+            lowfat_random_page(lowfat_seed);
             lowfat_seed_pos = 0;
         }
         *buf = lowfat_seed[lowfat_seed_pos];
@@ -118,20 +100,6 @@ static LOWFAT_NOINLINE void lowfat_rand(void *buf0, size_t len)
         len--;
         buf++;
     }
-}
-
-extern LOWFAT_NOINLINE const char *lowfat_color_escape_code(FILE *stream,
-    bool red)
-{
-    // Simply assumes ANSI compatible terminal rather than create ncurses
-    // dependency.  Who still uses non-ANSI terminals anyway?
-    int err = errno;
-    int r = isatty(fileno(stream));
-    errno = err;
-    if (!r)
-        return "";
-    else
-        return (red? "\33[31m": "\33[0m");
 }
 
 /*
@@ -153,7 +121,6 @@ static LOWFAT_NOINLINE void lowfat_print_banner(void)
 /*
  * Print an error or warning.
  */
-#include <execinfo.h>
 static LOWFAT_NOINLINE void lowfat_message(const char *format, bool err,
     va_list ap)
 {
@@ -170,16 +137,7 @@ static LOWFAT_NOINLINE void lowfat_message(const char *format, bool err,
 
     // (2) Dump the stack:
     if (lowfat_malloc_inited)
-    {
-        size_t MAX_TRACE = 256;
-        void *trace[MAX_TRACE];
-        int len = backtrace(trace, sizeof(trace) / sizeof(void *));
-        char **trace_strs = backtrace_symbols(trace, len);
-        for (int i = 0; i < len; i++)
-            fprintf(stderr, "%d: %s\n", i, trace_strs[i]);
-        if (len == 0 || len == sizeof(trace) / sizeof(void *))
-            fprintf(stderr, "...\n");
-    }
+        lowfat_backtrace();
 
     lowfat_num_messages++;
     lowfat_mutex_unlock(&lowfat_print_mutex);
@@ -210,38 +168,6 @@ static LOWFAT_NOINLINE void lowfat_warning(const char *format, ...)
 }
 
 /*
- * Open a unique+anonymous shared memory object.
- */
-static int lowfat_create_shm(size_t size)
-{
-    char path[] =
-        "/dev/shm/lowfat.XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX.tmp";
-    for (size_t i = 0; i < sizeof(path)-2; i++)
-    {
-        if (path[i] != 'X' || path[i+1] != 'X')
-            continue;
-        const char *xdigs = "0123456789ABCDEF";
-        uint8_t rbyte;
-        lowfat_rand(&rbyte, sizeof(rbyte));
-        path[i++] = xdigs[rbyte & 0x0F];
-        path[i]   = xdigs[(rbyte >> 4) & 0x0F];
-    }
-    int fd = open(path, O_CREAT | O_EXCL | O_RDWR, 0);
-    if (fd < 0)
-        lowfat_error("failed to open \"%s\": %s", path, strerror(errno));
-    if (unlink(path) < 0)
-        lowfat_error("failed to unlink \"%s\": %s", path, strerror(errno));
-    // The following call will fail if:
-    // (1) fd is not "the" unique file descriptor to `path'; or
-    // (2) a hardlink to `path' exists.
-    if (fcntl(fd, F_SETLEASE, F_WRLCK) < 0)
-        lowfat_error("failed to lease \"%s\": %s", path, strerror(errno));
-    if (ftruncate(fd, size) < 0)
-        lowfat_error("failed to truncate \"%s\": %s\n", path, strerror(errno));
-    return fd;
-}
-
-/*
  * Get pointer kind as a string.
  */
 static LOWFAT_NOINLINE const char *lowfat_kind(const void *ptr)
@@ -257,6 +183,7 @@ static LOWFAT_NOINLINE const char *lowfat_kind(const void *ptr)
     return "unused";
 }
 
+#if !defined(LOWFAT_WINDOWS)
 /*
  * LOWFAT SEGV handler.
  */
@@ -270,6 +197,7 @@ static LOWFAT_NORETURN void lowfat_segv_handler(int sig, siginfo_t *info,
         "\tsize    = %zu",
         ptr, lowfat_kind(ptr), lowfat_base(ptr), lowfat_size(ptr));
 }
+#endif
 
 /*
  * Setup the LOWFAT environment.
@@ -286,10 +214,12 @@ void LOWFAT_CONSTRUCTOR lowfat_init(void)
     // Basic sanity checks:
     if (sizeof(void *) != sizeof(uint64_t))
         lowfat_error("incompatible architecture (not x86-64)");
+#if !defined(LOWFAT_WINDOWS)
     if (sysconf(_SC_PAGESIZE) != LOWFAT_PAGE_SIZE)
         lowfat_error("incompatible system page size (expected %u; got %ld)",
             LOWFAT_PAGE_SIZE, sysconf(_SC_PAGESIZE));
-#ifndef LOWFAT_LEGACY
+#endif
+#if !defined(LOWFAT_LEGACY)
     uint32_t eax, ebx, ecx, edx;
     LOWFAT_CPUID(7, 0, eax, ebx, ecx, edx);
     if (((ebx >> 3) & 1) == 0 || ((ebx >> 8) & 1) == 0)
@@ -297,9 +227,8 @@ void LOWFAT_CONSTRUCTOR lowfat_init(void)
 #endif
  
     // Random seed memory:
-    lowfat_seed = (uint8_t *)mmap(NULL, LOWFAT_PAGE_SIZE,
-        PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
-    if (lowfat_seed == MAP_FAILED)
+    lowfat_seed = (uint8_t *)lowfat_map(NULL, LOWFAT_PAGE_SIZE, true, true, -1);
+    if (lowfat_seed == NULL)
         lowfat_error("failed to allocate random seed: %s", strerror(errno));
 
     // Init LOWFAT_SIZES and LOWFAT_MAGICS
@@ -307,45 +236,42 @@ void LOWFAT_CONSTRUCTOR lowfat_init(void)
         // Create LOWFAT_SIZES:
         size_t total_pages = (LOWFAT_MAX_ADDRESS / LOWFAT_REGION_SIZE) /
             (LOWFAT_PAGE_SIZE / sizeof(size_t));
-        int flags = MAP_PRIVATE | MAP_ANONYMOUS | MAP_NORESERVE | MAP_FIXED;
-        int prot = PROT_READ | PROT_WRITE;
-        size_t len = LOWFAT_SIZES_PAGES * LOWFAT_PAGE_SIZE;
-        void *ptr = mmap((void *)LOWFAT_SIZES, len, prot, flags, -1, 0);
+        size_t len = total_pages * LOWFAT_PAGE_SIZE;
+        void *ptr = lowfat_map((void *)LOWFAT_SIZES, len, true, true, -1);
         if (ptr != (void *)LOWFAT_SIZES)
         {
             mmap_error:
             lowfat_error("failed to mmap memory: %s", strerror(errno));
         }
+
+#if !defined(LOWFAT_WINDOWS)
         int fd = lowfat_create_shm(LOWFAT_PAGE_SIZE);
-        void *start = (uint8_t *)LOWFAT_SIZES + len;
+        void *start = (uint8_t *)LOWFAT_SIZES +
+            LOWFAT_SIZES_PAGES * LOWFAT_PAGE_SIZE;
         void *end = (uint8_t *)LOWFAT_SIZES + total_pages * LOWFAT_PAGE_SIZE;
+        bool w = true;
         while (start < end)
         {
-            flags = MAP_SHARED | MAP_NORESERVE | MAP_FIXED;
-            ptr = mmap(start, LOWFAT_PAGE_SIZE, prot, flags, fd, 0);
+            ptr = lowfat_map(start, LOWFAT_PAGE_SIZE, true, w, fd);
             if (ptr != start)
                 goto mmap_error;
             start = (uint8_t *)start + LOWFAT_PAGE_SIZE;
-            prot = PROT_READ;
+            w = false;
         }
         if (close(fd) < 0)
         {
             close_error:
             lowfat_error("failed to close object: %s", strerror(errno));
         }
+        size_t size_init_len = LOWFAT_PAGE_SIZE;
+#else
+        size_t size_init_len =
+            (total_pages - LOWFAT_SIZES_PAGES) * LOWFAT_PAGE_SIZE;
+#endif
 
         // Create LOWFAT_MAGICS:
-        flags = MAP_PRIVATE | MAP_ANONYMOUS | MAP_NORESERVE | MAP_FIXED;
-        prot = PROT_READ | PROT_WRITE;
-        ptr = mmap((void *)LOWFAT_MAGICS, len, prot, flags, -1, 0);
+        ptr = lowfat_map((void *)LOWFAT_MAGICS, len, true, true, -1);
         if (ptr != (void *)LOWFAT_MAGICS)
-            goto mmap_error;
-        prot = PROT_READ;
-        len = (total_pages - LOWFAT_SIZES_PAGES) * LOWFAT_PAGE_SIZE;
-        start = (uint8_t *)LOWFAT_MAGICS +
-            LOWFAT_SIZES_PAGES * LOWFAT_PAGE_SIZE;
-        ptr = mmap(start, len, prot, flags, -1, 0);
-        if (ptr != start)
             goto mmap_error;
 
         // Init LOWFAT_SIZES and LOWFAT_MAGICS data:
@@ -356,7 +282,7 @@ void LOWFAT_CONSTRUCTOR lowfat_init(void)
             LOWFAT_SIZES[i++] = lowfat_sizes[j];
         while (((uintptr_t)(LOWFAT_SIZES + i) % LOWFAT_PAGE_SIZE) != 0)
             LOWFAT_SIZES[i++] = SIZE_MAX;
-        for (size_t j = 0; j < LOWFAT_PAGE_SIZE / sizeof(size_t); j++)
+        for (size_t j = 0; j < size_init_len / sizeof(size_t); j++)
             LOWFAT_SIZES[i++] = SIZE_MAX;
         i = 0;
         LOWFAT_MAGICS[i++] = 0;
@@ -365,10 +291,8 @@ void LOWFAT_CONSTRUCTOR lowfat_init(void)
         while (((uintptr_t)(LOWFAT_MAGICS + i) % LOWFAT_PAGE_SIZE) != 0)
             LOWFAT_MAGICS[i++] = 0;
 
-        len = (LOWFAT_SIZES_PAGES + 1) * LOWFAT_PAGE_SIZE;
-        if (mprotect((void *)LOWFAT_SIZES, len, PROT_READ) < 0 ||
-            mprotect((void *)LOWFAT_MAGICS, LOWFAT_SIZES_PAGES *
-                LOWFAT_PAGE_SIZE, PROT_READ) < 0)
+        if (!lowfat_protect((void *)LOWFAT_SIZES, len, true, false) ||
+            !lowfat_protect((void *)LOWFAT_MAGICS, len, true, false))
             lowfat_error("failed to write protect memory: %s",
                 strerror(errno));
     }
@@ -378,13 +302,10 @@ void LOWFAT_CONSTRUCTOR lowfat_init(void)
     // Init regions for lowfat_malloc()
     for (size_t i = 1; i <= LOWFAT_NUM_REGIONS; i++)
     {
-        const int flags = MAP_PRIVATE | MAP_ANONYMOUS | MAP_NORESERVE |
-            MAP_FIXED;
-        const int prot = PROT_NONE;
         void *heap_start = (uint8_t *)lowfat_region(i) +
             LOWFAT_HEAP_MEMORY_OFFSET;
-        void *ptr = mmap(heap_start, LOWFAT_HEAP_MEMORY_SIZE, prot, flags,
-            -1, 0);
+        void *ptr = lowfat_map(heap_start, LOWFAT_HEAP_MEMORY_SIZE, false,
+            false, -1);
         if (ptr != heap_start)
             goto mmap_error;
     }
@@ -395,7 +316,7 @@ void LOWFAT_CONSTRUCTOR lowfat_init(void)
             strerror(errno));
     lowfat_malloc_inited = true;
 
-#ifndef LOWFAT_STANDALONE
+#if !defined(LOWFAT_STANDALONE) && !defined(LOWFAT_WINDOWS)
 
     // Init regions for the stack
 #ifndef LOWFAT_NO_MEMORY_ALIAS
@@ -404,12 +325,10 @@ void LOWFAT_CONSTRUCTOR lowfat_init(void)
         size_t idx;
         for (size_t i = 0; (idx = lowfat_stacks[i]) != 0; i++)
         {
-            int flags = MAP_FIXED | MAP_NORESERVE | MAP_SHARED;
-            const int prot = PROT_NONE;
             void *stack_start = (uint8_t *)lowfat_region(idx) +
                 LOWFAT_STACK_MEMORY_OFFSET;
-            void *ptr = mmap(stack_start, LOWFAT_STACK_MEMORY_SIZE, prot,
-                flags, fd, 0);
+            void *ptr = lowfat_map(stack_start, LOWFAT_STACK_MEMORY_SIZE,
+                false, false, fd);
             if (ptr != stack_start)
                 goto mmap_error;
         }
@@ -420,12 +339,10 @@ void LOWFAT_CONSTRUCTOR lowfat_init(void)
     size_t idx;
     for (size_t i = 0; (idx = lowfat_stacks[i]) != 0; i++)
     {
-        int flags = MAP_FIXED | MAP_NORESERVE | MAP_ANONYMOUS | MAP_PRIVATE;
-        const int prot = PROT_NONE;
         void *stack_start = (uint8_t *)lowfat_region(idx) +
             LOWFAT_STACK_MEMORY_OFFSET;
-        void *ptr = mmap(stack_start, LOWFAT_STACK_MEMORY_SIZE, prot, flags,
-            -1, 0);
+        void *ptr = lowfat_map(stack_start, LOWFAT_STACK_MEMORY_SIZE, false,
+            false, -1);
         if (ptr != stack_start)
             goto mmap_error;
     }
@@ -435,7 +352,7 @@ void LOWFAT_CONSTRUCTOR lowfat_init(void)
     if (!lowfat_threads_init())
         lowfat_error("failed to initialize lowfat threads: %s",
             strerror(errno));
-    
+
     // Install SEGV handler.
     stack_t ss;
     ss.ss_sp = (uint8_t *)LOWFAT_PAGES_BASE((void *)&ss) -
@@ -454,7 +371,7 @@ void LOWFAT_CONSTRUCTOR lowfat_init(void)
     // Replace stack with LOWFAT stack.
     lowfat_stack_pivot();
 
-#endif /* LOWFAT_STANDALONE */
+#endif
 #endif /* LOWFAT_DATA_ONLY */
 }
 
@@ -588,7 +505,8 @@ extern void lowfat_oob_check(unsigned info, const void *ptr, size_t size0,
         lowfat_oob_error(info, ptr, baseptr);
 }
 
-#if !defined(LOWFAT_DATA_ONLY) && !defined(LOWFAT_STANDALONE)
+#if !defined(LOWFAT_DATA_ONLY) && !defined(LOWFAT_STANDALONE) && \
+    !defined(LOWFAT_WINDOWS)
 /*
  * Perform a "stack pivot"; replacing the stack with the LOWFAT stack.
  * Unfortunately there is no way in Linux to specify the location of the stack

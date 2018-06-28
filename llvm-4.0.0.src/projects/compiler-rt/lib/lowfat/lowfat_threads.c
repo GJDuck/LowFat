@@ -7,16 +7,14 @@
  * 
  * Gregory J. Duck.
  *
- * Copyright (c) 2017 The National University of Singapore.
+ * Copyright (c) 2018 The National University of Singapore.
  * All rights reserved.
  *
  * This file is distributed under the University of Illinois Open Source
  * License. See the LICENSE file for details.
  */
 
-#include <pthread.h>
 #include <stddef.h>
-#include <dlfcn.h>
 
 #ifdef LOWFAT_NO_THREADS
 
@@ -35,7 +33,25 @@ static inline void lowfat_mutex_unlock(lowfat_mutex_t *mutex)
     return;
 }
 
-#else   /* LOWFAT_NO_THREADS */
+#elif defined(LOWFAT_WINDOWS)
+
+typedef HANDLE lowfat_mutex_t;
+
+static inline bool lowfat_mutex_init(lowfat_mutex_t *mutex)
+{
+    *mutex = CreateMutex(NULL, FALSE, NULL);
+    return (*mutex != NULL);
+}
+static inline void lowfat_mutex_lock(lowfat_mutex_t *mutex)
+{
+    WaitForSingleObject(*mutex, INFINITE);
+}
+static inline void lowfat_mutex_unlock(lowfat_mutex_t *mutex)
+{
+    ReleaseMutex(*mutex);
+}
+
+#else   /* !LOWFAT_NO_THREADS && !LOWFAT_WINDOWS */
 
 typedef pthread_mutex_t lowfat_mutex_t;
 
@@ -52,7 +68,7 @@ static inline void lowfat_mutex_unlock(lowfat_mutex_t *mutex)
     pthread_mutex_unlock(mutex);
 }
 
-#endif  /* LOWFAT_NO_THREADS */
+#endif  /* !LOWFAT_NO_THREADS && !LOWFAT_WINDOWS */
 
 #ifndef LOWFAT_STANDALONE
 
