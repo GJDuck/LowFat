@@ -102,6 +102,11 @@ build_llvm()
             -DLOWFAT_NO_REPLACE_STD_MALLOC -fPIC -shared \
             -o liblowfat.so -std=gnu99 -m64 "-I$PWD/${RUNTIME_PATH}/" \
             -DLOWFAT_LINUX -O2 $STANDALONE_OPTS "$PWD/${RUNTIME_PATH}/lowfat.c"
+        echo -e "${GREEN}$0${OFF}: creating lowfat.o for linking with dynamo-lowfat ..."
+        $CLANG -D_GNU_SOURCE -DLOWFAT_STANDALONE \
+            -DLOWFAT_NO_REPLACE_STD_MALLOC -c -fPIC \
+            -o lowfat.o -std=gnu99 -m64 "-I$PWD/${RUNTIME_PATH}/" \
+            -DLOWFAT_LINUX -O2 $STANDALONE_OPTS "$PWD/${RUNTIME_PATH}/lowfat.c"
     fi
 
     echo -e "${GREEN}$0${OFF}: cleaning up the LowFat config files..."
