@@ -90,7 +90,8 @@ static void *lowfat_base(const void *ptr)
 {
     uintptr_t iptr = (uintptr_t)ptr;
     size_t size = lowfat_size(ptr);
-    iptr -= iptr % size;
+    if (size != 0)
+        iptr -= iptr % size;
     return (void *)iptr;
 }
 

@@ -55,6 +55,7 @@ static LOWFAT_NOINLINE void lowfat_warning(const char *format, ...);
 static LOWFAT_DATA uint8_t *lowfat_seed = NULL;
 static LOWFAT_DATA size_t lowfat_seed_pos = LOWFAT_PAGE_SIZE;
 static LOWFAT_DATA bool lowfat_malloc_inited = false;
+static LOWFAT_DATA char **lowfat_envp = NULL;
 
 #ifdef LOWFAT_WINDOWS
 #include "lowfat_windows.c"
@@ -146,8 +147,8 @@ static LOWFAT_NOINLINE void lowfat_message(const char *format, bool err,
 /*
  * Print an error and exit.
  */
-static LOWFAT_NOINLINE LOWFAT_NORETURN void lowfat_error(
-    const char *format, ...)
+static LOWFAT_NOINLINE LOWFAT_NORETURN void lowfat_error(const char *format,
+    ...)
 {
     va_list ap;
     va_start(ap, format);
@@ -507,38 +508,50 @@ extern void lowfat_oob_check(unsigned info, const void *ptr, size_t size0,
 
 #if !defined(LOWFAT_DATA_ONLY) && !defined(LOWFAT_STANDALONE) && \
     !defined(LOWFAT_WINDOWS)
+
 /*
  * Perform a "stack pivot"; replacing the stack with the LOWFAT stack.
  * Unfortunately there is no way in Linux to specify the location of the stack
  * before the program starts up, hence the need for some hacks.
  * This code is likely fragile & non-portable.
  */
-extern LOWFAT_NOINLINE void *lowfat_stack_pivot_2(void *fptr0)
+extern LOWFAT_NOINLINE void *lowfat_stack_pivot_2(void *stack_top)
 {
-    uint8_t *fptr = (uint8_t *)fptr0 - ((uintptr_t)fptr0 % LOWFAT_PAGE_SIZE);
-    fptr += LOWFAT_PAGE_SIZE;
+    // Get the stack using the "environment pointer" method.  This assumes
+    // that the environment is stored at the base of the stack, which is
+    // currently true for Linux.  It is also necessary to copy the argv/env
+    // since we patch the stack.
+    if (lowfat_envp == NULL)
+        lowfat_error("failed to get the environment pointer");
+    char **envp = lowfat_envp;
+    lowfat_envp = NULL;
+    uint8_t *stack_bottom = (void *)envp;
+    while (*envp != NULL)
+    {
+        char *var = *envp;
+        uint8_t *end = (uint8_t *)(var + strlen(var) + 1);
+        stack_bottom = (stack_bottom < end? end: stack_bottom);
+        envp++;
+    }
+    stack_bottom = (stack_bottom < (uint8_t *)envp? (uint8_t *)envp:
+        stack_bottom);
+    if (((uintptr_t)stack_bottom % LOWFAT_PAGE_SIZE) != 0)
+        stack_bottom = stack_bottom +
+            (LOWFAT_PAGE_SIZE - (uintptr_t)stack_bottom % LOWFAT_PAGE_SIZE);
 
-    // mincore() will fail with ENOMEM for unmapped pages.  We can therefore
-    // linearly scan to the base of the stack.
-    // Note in practice this seems to be 1-3 pages at most if called from a
-    // constructor.
-    unsigned char vec;
-    while (mincore(fptr, LOWFAT_PAGE_SIZE, &vec) == 0)
-        fptr += LOWFAT_PAGE_SIZE;
-    if (errno != ENOMEM)
-        lowfat_error("failed to mincore page: %s", strerror(errno));
-    size_t size = fptr - (uint8_t *)fptr0;
+    // Copy the stack contents to a new LowFat-allocated stack:
+    size_t size = stack_bottom - (uint8_t *)stack_top;
     uint8_t *stack_base = (uint8_t *)lowfat_stack_alloc();
     if (stack_base == NULL)
         lowfat_error("failed to allocate stack: %s", strerror(errno));
     stack_base += LOWFAT_STACK_SIZE;
-    memcpy(stack_base - size, fptr0, size);
+    memcpy(stack_base - size, stack_top, size);
 
     // In some cases the old stack value may be stored on the stack itself,
     // and restored later.  To fix this we search for and replace old
     // stack pointers stored on the the stack itself.  There is a small
     // chance that we may patch an unrelated value.
-    void *old_stack_lo = fptr0, *old_stack_hi = fptr;
+    void *old_stack_lo = stack_top, *old_stack_hi = stack_bottom;
     void **new_stack_lo = (void **)(stack_base - size),
          **new_stack_hi = (void **)stack_base;
     for (void **pptr = new_stack_lo; pptr < new_stack_hi; pptr++)
@@ -548,7 +561,6 @@ extern LOWFAT_NOINLINE void *lowfat_stack_pivot_2(void *fptr0)
         {
             ssize_t diff = ((uint8_t *)ptr - (uint8_t *)old_stack_lo);
             void *new_ptr = (uint8_t *)new_stack_lo + diff;
-            // fprintf(stderr, "patch [%p -> %p]\n", ptr, new_ptr);
             *pptr = new_ptr;
         }
     }
@@ -570,10 +582,17 @@ __asm__ (
 /*
  * This bit of magic ensures lowfat_init() is called very early in process
  * startup.  Using the "constructor" attribute is not good enough since shared
- * object constructors/initializers may be called before lowfat_init().
+ * object constructors/initializers may be called before lowfat_init().  We
+ * also save the environment pointer so we can later derive the stack base.
  */
+void lowfat_preinit(int argc, char **argv, char **envp)
+{
+	lowfat_envp = envp;
+	lowfat_init();
+}
 __attribute__((section(".preinit_array"), used))
-void (*__local_effective_preinit)(void) = lowfat_init;
+void (*__local_effective_preinit)(int argc, char **argv, char **envp) =
+	lowfat_preinit;
 
 #endif
 
