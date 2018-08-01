@@ -201,13 +201,13 @@ else
 fi
 
 echo -e "${GREEN}$0${OFF}: building the LowFat config builder..."
-(cd config; CC=$CLANG CXX=$CLANGXX make >/dev/null)
+(cd config; CC=$CLANG CFLAGS="-std=gnu99" CXX=$CLANGXX make >/dev/null)
 
 echo -e "${GREEN}$0${OFF}: building the LowFat config..."
 (cd config; ./lowfat-config $CONFIG > lowfat-config.log)
 
 echo -e "${GREEN}$0${OFF}: building the LowFat config check..."
-(cd config; CC=$CLANG CXX=$CLANGXX make lowfat-check-config >/dev/null)
+(cd config; CC=$CLANG CLFAGS="-std=gnu99" CXX=$CLANGXX make lowfat-check-config >/dev/null)
 
 echo -e "${GREEN}$0${OFF}: checking the LowFat config..."
 if config/lowfat-check-config >/dev/null 2>&1
@@ -225,7 +225,7 @@ then
 fi
 
 echo -e "${GREEN}$0${OFF}: building the LowFat pointer info tool..."
-(cd config; CC=$CLANG CXX=$CLANGXX make lowfat-ptr-info >/dev/null)
+(cd config; CC=$CLANG CFLAGS="-std=gnu99" CXX=$CLANGXX make lowfat-ptr-info >/dev/null)
 
 if [ x$HAVE_CLANG_4 = xfalse ]
 then
