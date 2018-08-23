@@ -39,6 +39,7 @@
         "=d" (dx) : "a" (a), "c" (c))
 
 #define LOWFAT_SIZES            _LOWFAT_SIZES
+#define LOWFAT_OFFSETS          _LOWFAT_OFFSETS
 #define LOWFAT_MAGICS           _LOWFAT_MAGICS
 
 static LOWFAT_NOINLINE void lowfat_rand(void *buf, size_t len);
@@ -232,7 +233,7 @@ void LOWFAT_CONSTRUCTOR lowfat_init(void)
     if (lowfat_seed == NULL)
         lowfat_error("failed to allocate random seed: %s", strerror(errno));
 
-    // Init LOWFAT_SIZES and LOWFAT_MAGICS
+    // Init LOWFAT_SIZES, LOWFAT_OFFSETS and LOWFAT_MAGICS
     {
         // Create LOWFAT_SIZES:
         size_t total_pages = (LOWFAT_MAX_ADDRESS / LOWFAT_REGION_SIZE) /
@@ -265,6 +266,18 @@ void LOWFAT_CONSTRUCTOR lowfat_init(void)
             lowfat_error("failed to close object: %s", strerror(errno));
         }
         size_t size_init_len = LOWFAT_PAGE_SIZE;
+
+        // Create LOWFAT_OFFSETS
+        ptr = lowfat_map((void *)LOWFAT_OFFSETS,
+            sizeof(lowfat_stack_offsets), true, true, -1);
+        if (ptr != (void *)LOWFAT_OFFSETS)
+            goto mmap_error;
+        memcpy(LOWFAT_OFFSETS, lowfat_stack_offsets,
+            sizeof(lowfat_stack_offsets));
+        if (!lowfat_protect((void *)LOWFAT_OFFSETS,
+                sizeof(lowfat_stack_offsets), true, false))
+            goto mprotect_error;
+
 #else
         size_t size_init_len =
             (total_pages - LOWFAT_SIZES_PAGES) * LOWFAT_PAGE_SIZE;
@@ -294,8 +307,11 @@ void LOWFAT_CONSTRUCTOR lowfat_init(void)
 
         if (!lowfat_protect((void *)LOWFAT_SIZES, len, true, false) ||
             !lowfat_protect((void *)LOWFAT_MAGICS, len, true, false))
+        {
+mprotect_error:
             lowfat_error("failed to write protect memory: %s",
                 strerror(errno));
+        }
     }
 
 #ifndef LOWFAT_DATA_ONLY
@@ -387,7 +403,7 @@ static LOWFAT_CONST void *lowfat_region(size_t idx)
 
 extern LOWFAT_CONST void *lowfat_stack_mirror(void *ptr, size_t idx)
 {
-    return (void *)((uintptr_t)ptr + lowfat_stack_offsets[idx]);
+    return (void *)((uintptr_t)ptr + LOWFAT_OFFSETS[idx]);
 }
 
 extern LOWFAT_CONST void *lowfat_stack_align(void *ptr, size_t idx)

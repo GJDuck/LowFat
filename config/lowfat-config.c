@@ -43,6 +43,7 @@
 #define MAX_GLOBAL_ALLOC        (64 * MB)
 #define ASLR_MASK               0xFFFFFFFF
 #define LOWFAT_SIZES            0x200000
+#define LOWFAT_OFFSETS          0x2F0000
 #define LOWFAT_MAGICS           0x300000
 #define CPUID(a, c, ax, bx, cx, dx)                                         \
     __asm__ __volatile__ ("cpuid" : "=a" (ax), "=b" (bx), "=c" (cx),        \
@@ -523,6 +524,8 @@ static void compile(FILE *stream, FILE *hdr_stream, FILE *ld_stream,
         fprintf(hdr_stream, "\n");
         fprintf(hdr_stream, "#define _LOWFAT_SIZES ((size_t *)0x%X)\n",
             LOWFAT_SIZES);
+        fprintf(hdr_stream, "#define _LOWFAT_OFFSETS ((size_t *)0x%X)\n",
+            LOWFAT_OFFSETS);
         fprintf(hdr_stream, "#define _LOWFAT_MAGICS ((uint64_t *)0x%X)\n",
             LOWFAT_MAGICS);
         fprintf(hdr_stream, "#define _LOWFAT_REGION_SIZE %zuull\n",

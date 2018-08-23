@@ -1278,14 +1278,10 @@ static void addLowFatFuncs(Module *M)
         IRBuilder<> builder(Entry);
         Value *Ptr = &F->getArgumentList().front();
         Value *Idx = &F->getArgumentList().back();
-        Value *Offsets = M->getOrInsertGlobal("lowfat_stack_offsets",
-            ArrayType::get(builder.getInt64Ty(), 0));
-        if (GlobalVariable *Global = dyn_cast<GlobalVariable>(Offsets))
-            Global->setConstant(true);
-        vector<Value *> Idxs;
-        Idxs.push_back(builder.getInt64(0));
-        Idxs.push_back(Idx);
-        Value *OffsetPtr = builder.CreateGEP(Offsets, Idxs);
+        Value *Offsets = builder.CreateIntToPtr(
+            builder.getInt64((uint64_t)_LOWFAT_OFFSETS),
+            builder.getInt64Ty()->getPointerTo());
+        Value *OffsetPtr = builder.CreateGEP(Offsets, Idx);
         Value *Offset = builder.CreateAlignedLoad(OffsetPtr, sizeof(ssize_t));
         Ptr = builder.CreateGEP(Ptr, Offset);
         builder.CreateRet(Ptr);
