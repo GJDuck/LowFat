@@ -89,6 +89,11 @@ extern bool lowfat_malloc_init(void)
         info->freeptr   = startptr;
         info->endptr    = heapptr + LOWFAT_HEAP_MEMORY_SIZE;
         info->accessptr = LOWFAT_PAGES_BASE(startptr);
+
+#ifdef LOWFAT_NO_PROTECT
+        // In "no protect" mode, make entire heap region accessible
+        lowfat_protect(heapptr, LOWFAT_HEAP_MEMORY_SIZE, true, true);
+#endif      /* LOWFAT_NO_PROTECT */
     }
     return true;
 }
@@ -134,6 +139,7 @@ extern void *lowfat_malloc_index(size_t idx, size_t size)
 
         ptr = (void *)freelist;
 
+#ifndef LOWFAT_NO_PROTECT
         // For a free-list object, only the first page of the object is
         // guaranteed to be accessible.  Make the rest accessible here:
         if (alloc_size >= LOWFAT_BIG_OBJECT)
@@ -146,6 +152,7 @@ extern void *lowfat_malloc_index(size_t idx, size_t size)
             // Any remaining pages should be PROT_NONE as enforced by
             // lowfat_free().  These serve as guard pages.
         }
+#endif      /* LOWFAT_NO_PROTECT */
 
         return ptr;
     }
@@ -162,6 +169,7 @@ extern void *lowfat_malloc_index(size_t idx, size_t size)
     }
     info->freeptr = freeptr;
 
+#ifndef LOWFAT_NO_PROTECT
     void *accessptr = info->accessptr;
     if (freeptr > accessptr)
     {
@@ -174,6 +182,7 @@ extern void *lowfat_malloc_index(size_t idx, size_t size)
         lowfat_protect(prot_ptr, prot_size, true, true);
         info->accessptr = prot_ptr + prot_size;
     }
+#endif      /* LOWFAT_NO_PROTECT */
     
     lowfat_mutex_unlock(&info->mutex);
     return ptr;
@@ -223,8 +232,10 @@ extern void lowfat_free(void *ptr)
 
         lowfat_dont_need(prot_ptr + LOWFAT_PAGE_SIZE,
             prot_size - LOWFAT_PAGE_SIZE);
+#ifndef LOWFAT_NO_PROTECT
         lowfat_protect(prot_ptr + LOWFAT_PAGE_SIZE,
             prot_size - LOWFAT_PAGE_SIZE, false, false);
+#endif      /* LOWFAT_NO_PROTECT */
     }
 
     lowfat_regioninfo_t info = LOWFAT_REGION_INFO + idx;
@@ -239,13 +250,16 @@ extern void lowfat_free(void *ptr)
 /*
  * Stdlib malloc() and free() replacements.
  */
-// free()/realloc() must always be intercepted.  This handles the case where
+
+#ifndef LOWFAT_NO_REPLACE_STD_FREE
+// free()/realloc() should always be intercepted.  This handles the case where
 // memory is allocated by the main program, but free'ed by an uninstrumented
 // library.
 extern void free(void *ptr) LOWFAT_ALIAS("lowfat_free");
 extern void *realloc(void *ptr, size_t size) LOWFAT_ALIAS("lowfat_realloc");
 extern void _ZdlPv(void *ptr) LOWFAT_ALIAS("lowfat_free");
 extern void _ZdaPv(void *ptr) LOWFAT_ALIAS("lowfat_free");
+#endif      /* LOWFAT_NO_REPLACE_STD_FREE */
 
 #ifndef LOWFAT_NO_REPLACE_STD_MALLOC
 extern void *malloc(size_t size) LOWFAT_ALIAS("lowfat_malloc");
@@ -282,6 +296,7 @@ extern void *lowfat_realloc(void *ptr, size_t size)
     if (lowfat_is_ptr(ptr) &&
         lowfat_index(ptr) == lowfat_heap_select(size))
     {
+#ifndef LOWFAT_NO_PROTECT
         // `ptr' and `size' map to the same region; allocation can be avoided.
         size_t alloc_size = LOWFAT_SIZES[lowfat_index(ptr)];
         if (alloc_size >= LOWFAT_BIG_OBJECT)
@@ -290,6 +305,7 @@ extern void *lowfat_realloc(void *ptr, size_t size)
             size_t prot_size = LOWFAT_PAGES_SIZE(ptr, alloc_size);
             lowfat_protect(prot_ptr, prot_size, true, true);
         }
+#endif      /* LOWFAT_NO_PROTECT */
         return ptr;
     }
     if (!lowfat_is_ptr(ptr))
@@ -303,6 +319,7 @@ extern void *lowfat_realloc(void *ptr, size_t size)
     size_t idx = lowfat_index(ptr);
     size_t ptr_size = LOWFAT_SIZES[idx];
     cpy_size = (size < ptr_size? size: ptr_size);
+#ifndef LOWFAT_NO_PROTECT
     if (ptr_size >= LOWFAT_BIG_OBJECT)
     {
         // Note: the allocator does not track the object size; only the
@@ -313,6 +330,7 @@ extern void *lowfat_realloc(void *ptr, size_t size)
         size_t prot_size = LOWFAT_PAGES_SIZE(ptr, ptr_size);
         lowfat_protect(prot_ptr, prot_size, true, true);
     }
+#endif      /* LOWFAT_NO_PROTECT */
     memcpy(newptr, ptr, cpy_size);
     lowfat_free(ptr);
 

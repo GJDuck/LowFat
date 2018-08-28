@@ -205,14 +205,18 @@ static void compile(FILE *stream, FILE *hdr_stream, FILE *ld_stream,
 
 #define OPTION_NO_ERROR_GEN             1
 #define OPTION_NO_MEMORY_ALIAS          2
-#define OPTION_NO_REPLACE_STD_MALLOC    3
-#define OPTION_NO_STD_MALLOC_FALLBACK   4
-#define OPTION_NO_THREADS               5
+#define OPTION_NO_PROTECT               3
+#define OPTION_NO_REPLACE_STD_MALLOC    4
+#define OPTION_NO_REPLACE_STD_FREE      5
+#define OPTION_NO_STD_MALLOC_FALLBACK   6
+#define OPTION_NO_THREADS               7
 
 static bool option_no_error_gen = false;
 static bool option_no_memory_alias = false;
+static bool option_no_protect = false;
 static bool option_no_std_malloc_fallback = false;
 static bool option_no_replace_std_malloc = false;
+static bool option_no_replace_std_free = false;
 static bool option_no_threads = false;
 
 /*
@@ -224,7 +228,9 @@ int main(int argc, char **argv)
     {
         {"no-error-gen",           0, 0, OPTION_NO_ERROR_GEN},
         {"no-memory-alias",        0, 0, OPTION_NO_MEMORY_ALIAS},
+        {"no-protect",             0, 0, OPTION_NO_PROTECT},
         {"no-replace-std-malloc",  0, 0, OPTION_NO_REPLACE_STD_MALLOC},
+        {"no-replace-std-free",    0, 0, OPTION_NO_REPLACE_STD_FREE},
         {"no-std-malloc-fallback", 0, 0, OPTION_NO_STD_MALLOC_FALLBACK},
         {"no-threads",             0, 0, OPTION_NO_THREADS},
         {NULL, 0, 0, 0}
@@ -243,11 +249,17 @@ int main(int argc, char **argv)
             case OPTION_NO_MEMORY_ALIAS:
                 option_no_memory_alias = true;
                 break;
+            case OPTION_NO_PROTECT:
+                option_no_protect = true;
+                break;
             case OPTION_NO_STD_MALLOC_FALLBACK:
                 option_no_std_malloc_fallback = true;
                 break;
             case OPTION_NO_REPLACE_STD_MALLOC:
                 option_no_replace_std_malloc = true;
+                break;
+            case OPTION_NO_REPLACE_STD_FREE:
+                option_no_replace_std_free = true;
                 break;
             case OPTION_NO_THREADS:
                 option_no_threads = true;
@@ -263,16 +275,25 @@ int main(int argc, char **argv)
                 fprintf(stderr, "\t--no-memory-alias\n");
                 fprintf(stderr, "\t\tDo not use memory aliasing for the "
                     "stack.\n");
+                fprintf(stderr, "\t--no-protect\n");
+                fprintf(stderr, "\t\tDo not mprotect unused heap memory.\n");
                 fprintf(stderr, "\t--no-replace-std-malloc\n");
                 fprintf(stderr, "\t\tDo not replace stdlib malloc() with "
-                    "low-fat malloc() in\n");
+                    "LowFat malloc() in\n");
                 fprintf(stderr, "\t\tuninstrumented (linked) code.  NOTE: "
                     "stdlib malloc() will\n");
                 fprintf(stderr, "\t\tstill be replaced in instrumented "
                     "code.\n");
+                fprintf(stderr, "\t--no-replace-std-free\n");
+                fprintf(stderr, "\t\tDo not replace stdlib free() with "
+                    "LowFat free() in\n");
+                fprintf(stderr, "\t\tuninstrumented (linked) code.  NOTE: "
+                    "stdlib free() will\n");
+                fprintf(stderr, "\t\tstill be replaced in instrumented "
+                    "code.\n");
                 fprintf(stderr, "\t--no-std-malloc-fallback\n");
                 fprintf(stderr, "\t\tNever fallback to stdlib malloc() if "
-                    "low-fat malloc() fails.\n");
+                    "LowFat malloc() fails.\n");
                 fprintf(stderr, "\t--no-threads\n");
                 fprintf(stderr, "\t\tDo not support multi-threaded "
                     "programs.\n");
@@ -617,10 +638,14 @@ static void compile(FILE *stream, FILE *hdr_stream, FILE *ld_stream,
     fprintf(stream, "#define LOWFAT_JOINID_OFFSET 0x%x\n", 0x628);
     if (option_no_memory_alias)
         fprintf(stream, "#define LOWFAT_NO_MEMORY_ALIAS 1\n");
+    if (option_no_protect)
+        fprintf(stream, "#define LOWFAT_NO_PROTECT 1\n");
     if (option_no_std_malloc_fallback)
         fprintf(stream, "#define LOWFAT_NO_STD_MALLOC_FALLBACK 1\n");
     if (option_no_replace_std_malloc)
         fprintf(stream, "#define LOWFAT_NO_REPLACE_STD_MALLOC 1\n");
+    if (option_no_replace_std_free)
+        fprintf(stream, "#define LOWFAT_NO_REPALCE_STD_FREE 1\n");
     if (option_no_threads)
         fprintf(stream, "#define LOWFAT_NO_THREADS 1\n");
     if (legacy)
