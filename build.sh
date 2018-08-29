@@ -59,7 +59,6 @@ build_llvm()
     cp config/lowfat.ld $BUILD_PATH/lib/LowFat/
     
     echo -e "${GREEN}$0${OFF}: will now build LLVM..."
-    patch -p0 < bug81066.patch
     cd $BUILD_PATH
     
     if [ x$CONFIGURE = xtrue ]
@@ -69,7 +68,6 @@ build_llvm()
     fi
     make -j `nproc`
     cd ..
-    patch -p0 -R < bug81066.patch
     echo
 
     if [ x$BUILD_PLUGIN = xyes ]
