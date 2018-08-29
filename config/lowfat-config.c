@@ -645,7 +645,7 @@ static void compile(FILE *stream, FILE *hdr_stream, FILE *ld_stream,
     if (option_no_replace_std_malloc)
         fprintf(stream, "#define LOWFAT_NO_REPLACE_STD_MALLOC 1\n");
     if (option_no_replace_std_free)
-        fprintf(stream, "#define LOWFAT_NO_REPALCE_STD_FREE 1\n");
+        fprintf(stream, "#define LOWFAT_NO_REPLACE_STD_FREE 1\n");
     if (option_no_threads)
         fprintf(stream, "#define LOWFAT_NO_THREADS 1\n");
     if (legacy)

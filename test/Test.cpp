@@ -596,20 +596,23 @@ int main(int argc, char **argv)
         return EXIT_FAILURE;
     }
 
-    // Test indirect frees (e.g., by a library).  If this does not work
-    // then the program will crash.
-    printf("\n\33[35m*** FREE ***\33[0m\n");
+    if (free == lowfat_free)    // !defined(LOWFAT_NO_REPLACE_STD_FREE)
     {
-        void *ptr = malloc(16);
-        TEST_FREE(myFree(ptr));
-    }
-    {
-        void *ptr = malloc(16);
-        TEST_FREE(myRealloc(ptr));
-    }
-    {
-        int *ptr = new int;
-        TEST_FREE(myDelete(ptr));
+        // Test indirect frees (e.g., by a library).  If this does not work
+        // then the program will crash.
+        printf("\n\33[35m*** FREE ***\33[0m\n");
+        {
+            void *ptr = malloc(16);
+            TEST_FREE(myFree(ptr));
+        }
+        {
+            void *ptr = malloc(16);
+            TEST_FREE(myRealloc(ptr));
+        }
+        {
+            int *ptr = new int;
+            TEST_FREE(myDelete(ptr));
+        }
     }
 
     printf("\n\33[1;35mpassed\33[0m: (%zu/%zu) = \33[1m%.2f%%\33[0m\n\n",
