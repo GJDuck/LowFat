@@ -226,6 +226,16 @@ extern void *lowfat_memmove(void *_dst, const void *_src, size_t _n);
 extern void *lowfat_memcpy(void *_dst, const void *_src, size_t _n);
 
 /*
+ * Print an error and exit.
+ */
+extern _LOWFAT_NORETURN void lowfat_error(const char *format, ...);
+
+/*
+ * Print a warning.
+ */
+extern void lowfat_warning(const char *format, ...);
+
+/*
  * Get the number of errors that have been detected so far.
  */
 extern size_t lowfat_get_num_errors(void);

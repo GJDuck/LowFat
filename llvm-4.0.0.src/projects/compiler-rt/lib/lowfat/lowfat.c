@@ -147,8 +147,7 @@ static LOWFAT_NOINLINE void lowfat_message(const char *format, bool err,
 /*
  * Print an error and exit.
  */
-static LOWFAT_NOINLINE LOWFAT_NORETURN void lowfat_error(const char *format,
-    ...)
+LOWFAT_NOINLINE LOWFAT_NORETURN void lowfat_error(const char *format, ...)
 {
     va_list ap;
     va_start(ap, format);
@@ -160,7 +159,7 @@ static LOWFAT_NOINLINE LOWFAT_NORETURN void lowfat_error(const char *format,
 /*
  * Print a warning.
  */
-static LOWFAT_NOINLINE void lowfat_warning(const char *format, ...)
+LOWFAT_NOINLINE void lowfat_warning(const char *format, ...)
 {
     va_list ap;
     va_start(ap, format);
