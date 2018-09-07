@@ -476,7 +476,7 @@ extern size_t malloc_usable_size(void *ptr)
 {
     if (lowfat_is_ptr(ptr))
         return lowfat_size(ptr);
-    malloc_usable_size_t libc_malloc_usable_size = NULL;
+    static malloc_usable_size_t libc_malloc_usable_size = NULL;
     if (libc_malloc_usable_size == NULL)
     {
         libc_malloc_usable_size =
