@@ -63,8 +63,13 @@ static void *lowfat_fallback_malloc(size_t size)
 #endif      /* LOWFAT_NO_STD_MALLOC_FALLBACK */
 }
 
+#ifndef LOWFAT_WINDOWS
 #define lowfat_fallback_free(x)         __libc_free(x)
 #define lowfat_fallback_realloc(x, y)   __libc_realloc((x), (y))
+#else
+#define lowfat_fallback_free(x)         free(x)
+#define lowfat_fallback_realloc(x, y)   realloc((x), (y))
+#endif
 
 /*
  * Initialize the lowfat_malloc() state.

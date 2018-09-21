@@ -55,7 +55,9 @@ static LOWFAT_NOINLINE void lowfat_warning(const char *format, ...);
 static LOWFAT_DATA uint8_t *lowfat_seed = NULL;
 static LOWFAT_DATA size_t lowfat_seed_pos = LOWFAT_PAGE_SIZE;
 static LOWFAT_DATA bool lowfat_malloc_inited = false;
+#ifndef LOWFAT_WINDOWS
 static LOWFAT_DATA char **lowfat_envp = NULL;
+#endif
 
 #ifdef LOWFAT_WINDOWS
 #include "lowfat_windows.c"
