@@ -23,7 +23,7 @@
     (LOWFAT_NUM_PAGES(((uint8_t *)(ptr) -                               \
         (uint8_t *)LOWFAT_PAGES_BASE(ptr)) + (size)) * LOWFAT_PAGE_SIZE)
 
-static void lowfat_init(void);
+void lowfat_init(void);
 extern size_t malloc_usable_size(void *ptr);
 extern void *__libc_malloc(size_t size);
 extern void *__libc_realloc(void *ptr, size_t size);

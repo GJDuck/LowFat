@@ -88,7 +88,7 @@ static void lowfat_dont_need(void *ptr, size_t size)
     // NOP [Windows]
 }
 
-static void lowfat_init(void);
+void lowfat_init(void);
 extern BOOL APIENTRY lowfat_dll_entry(HANDLE module, DWORD reason,
     LPVOID reserved)
 {
