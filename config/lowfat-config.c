@@ -511,21 +511,23 @@ static void compile(FILE *stream, FILE *hdr_stream, FILE *ld_stream,
 {
     /*
      * Region layout:
-     * +------------------------------+----+----+---------+
-     * | H                            | G1 | G2 | S       |
-     * +------------------------------+----+----+---------+
+     *
+     * +---------------------------+------+------+-------------+
+     * |             H             |  G1  |  G2  |      S      |
+     * +---------------------------+------+------+-------------+
      *
      * H = Heap memory
-     * G1 = Global memory (non-const) (2GB)
-     * G2 = Global memory (const) (2GB)
-     * S = Stack memory (4GB)
+     * G1 = Global memory (non-const) (REGION_SIZE / 8)
+     * G2 = Global memory (const) (REGION_SIZE / 8)
+     * S = Stack memory (REGION_SIZE / 4)
      */
 	size_t H_G1_GAP_SIZE = 8*PAGE_SIZE;
 	size_t G1_G2_GAP_SIZE = 0;
 	size_t G2_S_GAP_SIZE = 8*PAGE_SIZE;
-	size_t S_SIZE = 4*GB;
-	size_t G1_SIZE = 8*GB;
-	size_t G2_SIZE = 8*GB;
+    size_t G_SIZE = region_size / 4;
+	size_t S_SIZE = region_size / 4;
+	size_t G1_SIZE = G_SIZE / 2;
+	size_t G2_SIZE = G_SIZE / 2;
 	size_t H_SIZE = region_size - H_G1_GAP_SIZE - G1_SIZE - G1_G2_GAP_SIZE -
         G2_SIZE - G2_S_GAP_SIZE - S_SIZE;
     size_t H_OFFSET = 0;
