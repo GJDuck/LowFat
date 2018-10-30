@@ -1242,6 +1242,30 @@ static void addLowFatFuncs(Module *M)
         F->addFnAttr(llvm::Attribute::AlwaysInline);
     }
 
+    F = M->getFunction("lowfat_stack_offset");
+    if (F != nullptr)
+    {
+        BasicBlock *Entry = BasicBlock::Create(M->getContext(), "", F);
+
+        IRBuilder<> builder(Entry);
+        Value *Idx = &F->getArgumentList().front();
+        Value *Sizes = M->getOrInsertGlobal("lowfat_stack_offsets",
+            ArrayType::get(builder.getInt64Ty(), 0));
+        if (GlobalVariable *Global = dyn_cast<GlobalVariable>(Sizes))
+            Global->setConstant(true);
+        vector<Value *> Idxs;
+        Idxs.push_back(builder.getInt64(0));
+        Idxs.push_back(Idx);
+        Value *OffsetPtr = builder.CreateGEP(Sizes, Idxs);
+        Value *Offset = builder.CreateAlignedLoad(OffsetPtr, sizeof(ssize_t));
+        builder.CreateRet(Offset);
+
+        F->setOnlyReadsMemory();
+        F->setDoesNotThrow();
+        F->setLinkage(GlobalValue::InternalLinkage);
+        F->addFnAttr(llvm::Attribute::AlwaysInline);
+    }
+
     F = M->getFunction("lowfat_stack_align");
     if (F != nullptr)
     {
@@ -1277,16 +1301,7 @@ static void addLowFatFuncs(Module *M)
 
         IRBuilder<> builder(Entry);
         Value *Ptr = &F->getArgumentList().front();
-        Value *Idx = &F->getArgumentList().back();
-        Value *Offsets = M->getOrInsertGlobal("lowfat_stack_offsets",
-            ArrayType::get(builder.getInt64Ty(), 0));
-        if (GlobalVariable *Global = dyn_cast<GlobalVariable>(Offsets))
-            Global->setConstant(true);
-        vector<Value *> Idxs;
-        Idxs.push_back(builder.getInt64(0));
-        Idxs.push_back(Idx);
-        Value *OffsetPtr = builder.CreateGEP(Offsets, Idxs);
-        Value *Offset = builder.CreateAlignedLoad(OffsetPtr, sizeof(ssize_t));
+        Value *Offset = &F->getArgumentList().back();
         Ptr = builder.CreateGEP(Ptr, Offset);
         builder.CreateRet(Ptr);
 
@@ -1483,7 +1498,7 @@ static void makeAllocaLowFatPtr(Module *M, Instruction *I)
     Function *F = I->getParent()->getParent();
     auto i = nextInsertPoint(F, Alloca);
     IRBuilder<> builder(i.first, i.second);
-    Value *Idx = nullptr, *AllocedPtr = nullptr;
+    Value *Idx = nullptr, *Offset = nullptr, *AllocedPtr = nullptr;
     Value *NoReplace1 = nullptr, *NoReplace2 = nullptr;
     Value *CastAlloca = nullptr;
     Value *LifetimeSize = nullptr;
@@ -1502,6 +1517,7 @@ static void makeAllocaLowFatPtr(Module *M, Instruction *I)
                 "Stack allocation cannot be made low-fat (too big)"));
             return;
         }
+        ssize_t offset = lowfat_stack_offsets[idx];
         size_t align = ~lowfat_stack_masks[idx] + 1;
         if (align > Alloca->getAlignment())
             Alloca->setAlignment(align);
@@ -1524,9 +1540,9 @@ static void makeAllocaLowFatPtr(Module *M, Instruction *I)
         }
         else
             AllocedPtr = builder.CreateBitCast(Alloca, builder.getInt8PtrTy());
+        Offset = builder.getInt64(offset);
         CastAlloca = AllocedPtr;
         NoReplace1 = AllocedPtr;
-        Idx = builder.getInt64(idx);
     }
     else
     {
@@ -1537,7 +1553,7 @@ static void makeAllocaLowFatPtr(Module *M, Instruction *I)
         // Complex+hard case: variable length stack object (e.g. VLAs)
         delAlloca = true;
 
-        // STEP (1): Get the index:
+        // STEP (1): Get the index/offset:
         Size = builder.CreateMul(builder.getInt64(DL->getTypeAllocSize(Ty)),
             Size);
         Constant *C = M->getOrInsertFunction("llvm.ctlz.i64",
@@ -1545,6 +1561,11 @@ static void makeAllocaLowFatPtr(Module *M, Instruction *I)
             nullptr);
         Idx = builder.CreateCall(C, {Size, builder.getInt1(true)});
         if (CallInst *Call = dyn_cast<CallInst>(Idx))
+            Call->setTailCall(true);
+        C = M->getOrInsertFunction("lowfat_stack_offset",
+            builder.getInt64Ty(), builder.getInt64Ty(), nullptr);
+        Offset = builder.CreateCall(C, {Idx});
+        if (CallInst *Call = dyn_cast<CallInst>(Offset))
             Call->setTailCall(true);
 
         // STEP (2): Get the actual allocation size:
@@ -1582,7 +1603,7 @@ static void makeAllocaLowFatPtr(Module *M, Instruction *I)
     Value *C = M->getOrInsertFunction("lowfat_stack_mirror",
         builder.getInt8PtrTy(), builder.getInt8PtrTy(), builder.getInt64Ty(),
         nullptr);
-    Value *MirroredPtr = builder.CreateCall(C, {AllocedPtr, Idx});
+    Value *MirroredPtr = builder.CreateCall(C, {AllocedPtr, Offset});
     NoReplace2 = MirroredPtr;
     Value *Ptr = builder.CreateBitCast(MirroredPtr, Alloca->getType());
 

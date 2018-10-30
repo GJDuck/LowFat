@@ -43,7 +43,7 @@
 
 static LOWFAT_NOINLINE void lowfat_rand(void *buf, size_t len);
 static LOWFAT_CONST void *lowfat_region(size_t idx);
-extern LOWFAT_CONST void *lowfat_stack_mirror(void *ptr, size_t idx);
+extern LOWFAT_CONST void *lowfat_stack_mirror(void *ptr, ssize_t offset);
 extern LOWFAT_NOINLINE void lowfat_stack_pivot(void);
 static LOWFAT_NOINLINE LOWFAT_NORETURN void lowfat_error(
     const char *format, ...);
@@ -386,9 +386,14 @@ static LOWFAT_CONST void *lowfat_region(size_t idx)
     return (void *)(idx * LOWFAT_REGION_SIZE);
 }
 
-extern LOWFAT_CONST void *lowfat_stack_mirror(void *ptr, size_t idx)
+extern LOWFAT_CONST void *lowfat_stack_mirror(void *ptr, ssize_t offset)
 {
-    return (void *)((uintptr_t)ptr + lowfat_stack_offsets[idx]);
+    return (void *)((uint8_t *)ptr + offset);
+}
+
+extern LOWFAT_CONST ssize_t lowfat_stack_offset(size_t idx)
+{
+    return lowfat_stack_offsets[idx];
 }
 
 extern LOWFAT_CONST void *lowfat_stack_align(void *ptr, size_t idx)
