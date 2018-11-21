@@ -367,7 +367,7 @@ void LOWFAT_CONSTRUCTOR lowfat_init(void)
     struct sigaction action;
     memset(&action, 0, sizeof(action));
     action.sa_sigaction = lowfat_segv_handler;
-    action.sa_flags |= SA_ONSTACK;
+    action.sa_flags |= SA_ONSTACK | SA_SIGINFO;
     sigaction(SIGSEGV, &action, NULL);
 
     // Replace stack with LOWFAT stack.
