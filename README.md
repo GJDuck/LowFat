@@ -28,7 +28,7 @@ allocation of objects of a given fixed size range, as illustrated by the
 diagram below.
 
 <p align="center">
-<img src="https://www.comp.nus.edu.sg/~gregory/lowfat/layout.png" width="60%"
+<img src="images/layout.png" width="60%"
 alt="LowFat memory layout" border="1">
 </p>
 
@@ -181,7 +181,7 @@ We experimentally evaluate LowFat against the SPEC2006 benchmark suite.
 The results for the default configuration are shown below.
 
 <p align="center">
-<img src="https://www.comp.nus.edu.sg/~gregory/lowfat/results.png" width="60%"
+<img src="images/results.png" width="60%"
 alt="LowFat SPEC2006 timings">
 </p>
 
@@ -208,7 +208,7 @@ After applying these optimizations, we see that overall overhead LowFat is
 significantly reduced to ~9.8% overall:
 
 <p align="center">
-<img src="https://www.comp.nus.edu.sg/~gregory/lowfat/results_opt.png"
+<img src="images/results_opt.png"
 width="60%" alt="Optimized LowFat SPEC2006 timings">
 </p>
 
