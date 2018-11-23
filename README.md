@@ -372,6 +372,27 @@ Memory Error Detection using Dynamically Typed C/C++*" was
 accepted at PLDI'2018.  We plan to release EffectiveSan sometime in 2018
 (see here: https://github.com/GJDuck/EffectiveSan).
 
+Follow-up Work
+--------------
+
+* D. Song et el, *SoK: Sanitizing for Security*, 2019:
+  This survey paper independently measures the overhead of LowFat's
+  *legacy mode* for older CPUs at ~85%.  Legacy mode is known to be slower,
+  and is not officially supported.
+* R. Gil et al, *There's a Hole in the Bottom of the C: On the Effectiveness
+  of Allocation Protection*, 2018:
+  This paper claims "pointer stretching" (using **sub-object** overflows to
+  overwrite a function pointers) as an attack against LowFat and related
+  bounds checkers.  However, sub-object overflows are **explicitly
+  out-of-the-scope** of LowFat (see the *Caveats* above), so it is hardly
+  surprising that the "pointer stretching" attack still works.  Similarly,
+  LowFat does not protect against other out-of-scope errors, including
+  use-after-free, type confusion, uninitialized memory, etc., and these
+  may also be used for attacks.
+  Finally, the paper overlooks existing LowFat extensions that **does**
+  detect sub-object overflows (and much more), namely
+  [EffectiveSan](https://github.com/GJDuck/EffectiveSan).
+
 Versions
 --------
 
