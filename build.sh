@@ -170,14 +170,13 @@ LLVM_CONFIG=`which llvm-config-4.0`
 HAVE_CLANG_4=false
 if [ -z "$CLANG" -o -z "$CLANGXX" -o -z "$LLVM_CONFIG" ]
 then
-    echo -e \
-        "${GREEN}$0${OFF}: ${YELLOW}warning${OFF}: clang-4.0 is not installed!"
-    echo -e "${GREEN}$0${OFF}: will try the default clang."
+    echo -e "${GREEN}$0${OFF}: ${YELLOW}warning${OFF}: one or more of clang-4.0/clang++-4.0/llvm-config-4.0 is not installed!"
+    echo -e "${GREEN}$0${OFF}: will try gcc."
     CLANG=`which gcc`
     CLANGXX=`which g++`
     if [ -z "$CLANG" -o -z "$CLANGXX" ]
     then
-        echo -e "${GREEN}$0${OFF}: ${RED}ERROR${OFF}: gcc is not installed!"
+        echo -e "${GREEN}$0${OFF}: ${RED}ERROR${OFF}: one or more of gcc/g++ is not installed!"
         exit 1
     fi
 else
