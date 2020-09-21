@@ -225,8 +225,7 @@ namespace __sanitizer {
     unsigned long __unused1;
     unsigned long __unused2;
 #else
-    unsigned short mode;
-    unsigned short __pad1;
+    unsigned int mode;
     unsigned short __seq;
     unsigned short __pad2;
 #if defined(__x86_64__) && !defined(_LP64)
