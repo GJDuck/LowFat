@@ -61,6 +61,7 @@ static void lowfat_random_page(void *buf)
 			path);
 }
 
+#ifdef __GLIBC__
 #include <execinfo.h>
 static LOWFAT_NOINLINE void lowfat_backtrace(void)
 {
@@ -73,6 +74,9 @@ static LOWFAT_NOINLINE void lowfat_backtrace(void)
 	if (len == 0 || len == sizeof(trace) / sizeof(void *))
 	    fprintf(stderr, "...\n");
 }
+#else
+static LOWFAT_NOINLINE void lowfat_backtrace(void) { }
+#endif /* __GLIBC__ */
 
 /*
  * Open a unique+anonymous shared memory object.
