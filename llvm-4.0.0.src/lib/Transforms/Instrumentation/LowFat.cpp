@@ -540,7 +540,12 @@ static Bounds getPtrBounds(const TargetLibraryInfo *TLI, const DataLayout *DL,
     Bounds bounds = Bounds::nonFat();
     if (GetElementPtrInst *GEP = dyn_cast<GetElementPtrInst>(Ptr))
     {
-        bounds = getPtrBounds(TLI, DL, GEP->getPointerOperand(), boundsInfo);
+        // JumpThreading or other optimizations may produce incorrect IR that
+        // has not yet been removed; e.g.
+        // %231 = getelementptr inbounds i8, i8* %231, i64 1
+        bounds = GEP != GEP->getPointerOperand() ?
+                 getPtrBounds(TLI, DL, GEP->getPointerOperand(), boundsInfo) :
+                 Bounds::nonFat();
         if (!bounds.isUnknown() && !bounds.isNonFat())
         {
             APInt offset(64, 0);
