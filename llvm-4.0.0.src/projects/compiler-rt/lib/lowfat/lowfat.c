@@ -579,6 +579,7 @@ __asm__ (
     "\t.type lowfat_stack_pivot,@function\n"
     "lowfat_stack_pivot:\n"
     "\tmovq %rsp, %rdi\n"
+    "\tsub $8, %rsp\n"
     "\tmovabsq $lowfat_stack_pivot_2, %rax\n"
     "\tcallq *%rax\n"
     "\tmovq %rax, %rsp\n"
