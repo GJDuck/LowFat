@@ -47,6 +47,7 @@
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Analysis/MemoryBuiltins.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
+#include "llvm/IR/MDBuilder.h"
 
 extern "C"
 {
@@ -1189,15 +1190,19 @@ static void addLowFatFuncs(Module *M)
         Value *Diff = builder.CreateSub(IPtr, IBasePtr);
         Size = builder.CreateSub(Size, AccessSize);
         Value *Cmp = builder.CreateICmpUGE(Diff, Size);
-        builder.CreateCondBr(Cmp, Error, Return);
-        
+
+        MDNode *Weights = MDBuilder(M->getContext()).createBranchWeights(2000000000, 1);
+        builder.CreateCondBr(Cmp, Error, Return, Weights);
+
         IRBuilder<> builder2(Error);
         if (!option_no_abort)
         {
-            Value *Error = M->getOrInsertFunction("lowfat_oob_error",
-                builder2.getVoidTy(), builder2.getInt32Ty(),
-                builder2.getInt8PtrTy(), builder2.getInt8PtrTy(), nullptr);
-            CallInst *Call = builder2.CreateCall(Error, {Info, Ptr, BasePtr});
+            vector<Type *> AsmArgTypes;
+            FunctionType *AsmFTy = FunctionType::get(Type::getVoidTy(M->getContext()), AsmArgTypes, false);
+            StringRef constraints = "~{dirflag},~{fpsr},~{flags}";
+            InlineAsm *IA = InlineAsm::get(AsmFTy, "ud2", constraints, true, false, InlineAsm::AD_Intel);
+            ArrayRef<Value *> Args = None;
+            CallInst *Call = builder2.CreateCall(IA, Args);
             Call->setDoesNotReturn();
             builder2.CreateUnreachable();
         }
@@ -1835,4 +1840,3 @@ static void register_pass(const PassManagerBuilder &PMB,
 static RegisterStandardPasses RegisterPass(
     PassManagerBuilder::EP_LoopOptimizerEnd, register_pass);
 #endif      /* LOWFAT_PLUGIN */
-
