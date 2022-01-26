@@ -210,6 +210,9 @@ static cl::opt<string> option_no_check_blacklist(
 static cl::opt<bool> option_no_abort(
     "lowfat-no-abort",
     cl::desc("Do not abort the program if an OOB memory error occurs"));
+static cl::opt<bool> option_signal(
+    "lowfat-signal",
+    cl::desc("Raise SIGILL if an OOB memory error occurs"));
 
 /*
  * Fool-proof "leading zero count" implementation.  Also works for "0".
@@ -1197,14 +1200,26 @@ static void addLowFatFuncs(Module *M)
         IRBuilder<> builder2(Error);
         if (!option_no_abort)
         {
-            vector<Type *> AsmArgTypes;
-            FunctionType *AsmFTy = FunctionType::get(Type::getVoidTy(M->getContext()), AsmArgTypes, false);
-            StringRef constraints = "~{dirflag},~{fpsr},~{flags}";
-            InlineAsm *IA = InlineAsm::get(AsmFTy, "ud2", constraints, true, false, InlineAsm::AD_Intel);
-            ArrayRef<Value *> Args = None;
-            CallInst *Call = builder2.CreateCall(IA, Args);
-            Call->setDoesNotReturn();
-            builder2.CreateUnreachable();
+            if(option_signal){
+                vector<Type *> AsmArgTypes;
+                FunctionType *AsmFTy = FunctionType::get(Type::getVoidTy(M->getContext()), AsmArgTypes, false);
+                StringRef constraints = "~{dirflag},~{fpsr},~{flags}";
+                InlineAsm *IA = InlineAsm::get(AsmFTy, "ud2", constraints, true, false, InlineAsm::AD_Intel);
+                ArrayRef<Value *> Args = None;
+                CallInst *Call = builder2.CreateCall(IA, Args);
+                Call->setDoesNotReturn();
+                builder2.CreateUnreachable();
+            }
+            else
+            {
+                Value *Error = M->getOrInsertFunction("lowfat_oob_error",
+                    builder2.getVoidTy(), builder2.getInt32Ty(),
+                    builder2.getInt8PtrTy(), builder2.getInt8PtrTy(), nullptr);
+                CallInst *Call = builder2.CreateCall(Error, {Info, Ptr, BasePtr});
+                Call->setDoesNotReturn();
+                builder2.CreateUnreachable();
+            }
+            
         }
         else
         {
