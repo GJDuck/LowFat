@@ -1218,8 +1218,7 @@ static void addLowFatFuncs(Module *M)
                 CallInst *Call = builder2.CreateCall(Error, {Info, Ptr, BasePtr});
                 Call->setDoesNotReturn();
                 builder2.CreateUnreachable();
-            }
-            
+            }            
         }
         else
         {
