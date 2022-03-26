@@ -34,7 +34,7 @@ alt="LowFat memory layout" border="1">
 
 The first region contains the programs `text`, `data`, `bss`, etc., segments
 as usual.  The subsequent regions are used for low-fat pointer allocation.
-For example, region #1 is used for allocations of size 1-16bytes, region #2
+For example, region `#1` is used for allocations of size 1-16bytes, region `#2`
 for allocations of size 17-32bytes, etc.  Furthermore, all LowFat allocated
 objects are aligned to allocation-size boundaries.  Using these properties,
 the object's bounds information can be reconstructed based on the pointer
@@ -381,17 +381,12 @@ Follow-up Work
   and is not officially supported.
 * R. Gil et al, *There's a Hole in the Bottom of the C: On the Effectiveness
   of Allocation Protection*, 2018:
-  This paper claims "pointer stretching" (using a *sub-object overflow* to
-  overwrite a function pointer) as an attack against LowFat and related
-  bounds checkers.  However, sub-object overflows are **explicitly
-  out-of-the-scope** of LowFat (see the *Caveats* above), so it is hardly
-  surprising that the "pointer stretching" attack still works.  Similarly,
-  LowFat does not protect against other out-of-scope errors, including
-  use-after-free, type confusion, uninitialized memory, etc., and these
-  may also be used for attacks.
-  Finally, the paper overlooks existing LowFat extensions that do
-  detect sub-object overflows (and much more), namely
-  [EffectiveSan](https://github.com/GJDuck/EffectiveSan).
+  This paper claims "pointer stretching" (a.k.a. *sub-object overflows*)
+  as an attack against LowFat.
+  However, LowFat never claimed to detect sub-object bounds errors,
+  which are **explicitly out-of-the-scope** (see *Caveats* above).
+  Sub-object bounds errors *can* however be detected by LowFat extensions,
+  specifically [EffectiveSan](https://github.com/GJDuck/EffectiveSan).
 
 Versions
 --------
