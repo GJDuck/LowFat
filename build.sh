@@ -77,7 +77,8 @@ build_llvm()
             -DCMAKE_BUILD_TYPE=Release \
             -DCMAKE_INSTALL_PREFIX=install \
             -DBUILD_SHARED_LIBS=ON \
-            -DLLVM_TARGETS_TO_BUILD="X86"
+            -DLLVM_TARGETS_TO_BUILD="X86" \
+            -DLLVM_BINUTILS_INCDIR=/usr/include
     fi
     make -j `nproc` install install-clang
     rm -rf "../$RELEASE_NAME"

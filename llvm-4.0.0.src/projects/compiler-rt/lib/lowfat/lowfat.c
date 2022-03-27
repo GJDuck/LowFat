@@ -27,7 +27,7 @@
 #define LOWFAT_PAGE_SIZE        4096
 #define LOWFAT_MAX_ADDRESS      0x1000000000000ull
 
-#define LOWFAT_CONSTRUCTOR      __attribute__((__constructor__(10102)))
+#define LOWFAT_CONSTRUCTOR      __attribute__((__constructor__(0)))
 #define LOWFAT_DESTRUCTOR       __attribute__((__destructor__(10102)))
 #define LOWFAT_NOINLINE         __attribute__((__noinline__))
 #define LOWFAT_NORETURN         __attribute__((__noreturn__))
@@ -55,9 +55,6 @@ static LOWFAT_NOINLINE void lowfat_warning(const char *format, ...);
 static LOWFAT_DATA uint8_t *lowfat_seed = NULL;
 static LOWFAT_DATA size_t lowfat_seed_pos = LOWFAT_PAGE_SIZE;
 static LOWFAT_DATA bool lowfat_malloc_inited = false;
-#ifndef LOWFAT_WINDOWS
-static LOWFAT_DATA char **lowfat_envp = NULL;
-#endif
 
 #ifdef LOWFAT_WINDOWS
 #include "lowfat_windows.c"
@@ -527,10 +524,7 @@ extern LOWFAT_NOINLINE void *lowfat_stack_pivot_2(void *stack_top)
     // that the environment is stored at the base of the stack, which is
     // currently true for Linux.  It is also necessary to copy the argv/env
     // since we patch the stack.
-    if (lowfat_envp == NULL)
-        lowfat_error("failed to get the environment pointer");
-    char **envp = lowfat_envp;
-    lowfat_envp = NULL;
+    char **envp = __environ;
     uint8_t *stack_bottom = (void *)envp;
     while (*envp != NULL)
     {
@@ -579,26 +573,12 @@ __asm__ (
     "\t.type lowfat_stack_pivot,@function\n"
     "lowfat_stack_pivot:\n"
     "\tmovq %rsp, %rdi\n"
+    "\tsub $8, %rsp\n"
     "\tmovabsq $lowfat_stack_pivot_2, %rax\n"
     "\tcallq *%rax\n"
     "\tmovq %rax, %rsp\n"
     "\tretq\n"
 );
-
-/*
- * This bit of magic ensures lowfat_init() is called very early in process
- * startup.  Using the "constructor" attribute is not good enough since shared
- * object constructors/initializers may be called before lowfat_init().  We
- * also save the environment pointer so we can later derive the stack base.
- */
-void lowfat_preinit(int argc, char **argv, char **envp)
-{
-	lowfat_envp = envp;
-	lowfat_init();
-}
-__attribute__((section(".preinit_array"), used))
-void (*__local_effective_preinit)(int argc, char **argv, char **envp) =
-	lowfat_preinit;
 
 #endif
 

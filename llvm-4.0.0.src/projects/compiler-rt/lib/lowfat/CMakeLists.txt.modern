@@ -5,7 +5,7 @@ set(LOWFAT_SOURCES
 
 include_directories(..)
 
-set(LOWFAT_CFLAGS -std=gnu99 -m64 -I. -O2 -mbmi -mbmi2 -mlzcnt -mcmodel=large -DLOWFAT_LINUX)
+set(LOWFAT_CFLAGS ${SANITIZER_COMMON_CFLAGS} -std=gnu99 -m64 -I. -O2 -mbmi -mbmi2 -mlzcnt -mcmodel=large -DLOWFAT_LINUX)
 
 add_compiler_rt_runtime(clang_rt.lowfat
         STATIC
